@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10151d" />
+    <meta name="description" content="A transparent quantitative CS2 trade-up analysis dashboard." />
+    <title>TradeUp Lab — Quantitative CS2 Analysis</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#top" aria-label="TradeUp Lab home">
+          <span class="brand-mark">T</span>
+          <span>TradeUp <strong>Lab</strong></span>
+        </a>
+        <div class="topbar-meta">
+          <span class="status-dot"></span>
+          <span>Static analysis · GitHub Pages ready</span>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero">
+          <div class="eyebrow"><span class="eyebrow-line"></span> QUANTITATIVE MARKET ANALYSIS</div>
+          <h1>Find the trade-up edge<br /><em>before you trade.</em></h1>
+          <p class="hero-copy">
+            Model collection probabilities, output floats, fees and exit liquidity in one transparent dashboard.
+            No promises. Just the numbers behind the decision.
+          </p>
+          <div class="hero-tags">
+            <span>Probability</span>
+            <span>Float modelling</span>
+            <span>Risk-aware EV</span>
+          </div>
+        </section>
+
+        <section class="workspace-grid" aria-label="Trade-up inputs">
+          <div class="panel inputs-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="panel-kicker">01 / CONTRACT</span>
+                <h2>Input items</h2>
+              </div>
+              <span class="count-pill">10 required</span>
+            </div>
+            <p class="panel-description">Enter the collection, float and acquisition cost for each input.</p>
+            <div class="input-labels" aria-hidden="true">
+              <span>#</span><span>Collection</span><span>Float</span><span>Cost</span>
+            </div>
+            <div id="inputRows" class="input-list"></div>
+            <div class="formula-note">
+              <span class="formula-icon">ƒ</span>
+              <span>Output float = output minimum + average input float × output range</span>
+            </div>
+          </div>
+
+          <div class="side-stack">
+            <div class="panel assumptions-panel">
+              <div class="panel-heading compact">
+                <div>
+                  <span class="panel-kicker">02 / ASSUMPTIONS</span>
+                  <h2>Exit routes</h2>
+                </div>
+              </div>
+              <p class="panel-description">Adjust fees to reflect the quote you would actually receive.</p>
+              <div class="fee-grid">
+                <label>Steam fee <span class="input-with-suffix"><input id="steamFee" type="number" min="0" max="100" step="0.1" value="15" /><span>%</span></span></label>
+                <label>Instant fee <span class="input-with-suffix"><input id="instantFee" type="number" min="0" max="100" step="0.1" value="0" /><span>%</span></span></label>
+                <label>Steam fixed fee <span class="input-with-suffix"><input id="steamFixedFee" type="number" min="0" step="0.01" value="0" /><span>€</span></span></label>
+                <label>Instant fixed fee <span class="input-with-suffix"><input id="instantFixedFee" type="number" min="0" step="0.01" value="0" /><span>€</span></span></label>
+              </div>
+            </div>
+
+            <div class="panel outputs-panel">
+              <div class="panel-heading compact">
+                <div>
+                  <span class="panel-kicker">03 / OUTCOMES</span>
+                  <h2>Eligible outputs</h2>
+                </div>
+              </div>
+              <p class="panel-description">Use representative current quotes; live adapters come next.</p>
+              <div id="outputGroups"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="results-section" aria-live="polite">
+          <div class="results-heading">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span> 04 / DECISION VIEW</div>
+              <h2>Expected value, not wishful thinking.</h2>
+            </div>
+            <button id="analyzeButton" class="primary-button" type="button"><span>Run analysis</span><span class="button-arrow">↗</span></button>
+          </div>
+
+          <div id="errorBox" class="error-box" role="alert" hidden></div>
+          <div id="metrics" class="metrics-grid"></div>
+
+          <div class="results-grid">
+            <div class="panel outcomes-panel">
+              <div class="panel-heading compact">
+                <div>
+                  <span class="panel-kicker">OUTCOME DISTRIBUTION</span>
+                  <h2>What can come out?</h2>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Output</th><th>Chance</th><th>Float</th><th>Steam net</th><th>Instant net</th></tr>
+                  </thead>
+                  <tbody id="outcomeTable"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <aside id="insightPanel" class="panel insight-panel"></aside>
+          </div>
+        </section>
+
+        <section class="method-section">
+          <div class="method-copy">
+            <span class="panel-kicker">MODEL NOTES</span>
+            <h2>Transparent by design.</h2>
+            <p>
+              Collection selection is weighted by the number of inputs from each collection. Outputs inside a selected collection
+              are treated as equally likely. Prices are representative quotes, not guarantees; spreads, volatility, trade locks and
+              platform fees can change the result.
+            </p>
+          </div>
+          <div class="method-equation">
+            <span>Expected value</span>
+            <strong>EV = Σ P(output) × net sale price − input cost</strong>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>TradeUp Lab / research prototype</span>
+        <span>Built for transparent decision-making</span>
+      </footer>
+    </div>
+    <script src="app.js" defer></script>
+  </body>
+</html>
