@@ -1,8 +1,6 @@
 # CS2 Trade-Up Analysis MVP
 
-[![Open website](https://img.shields.io/badge/Open%20website-TradeUp%20Lab-b9f45a?style=for-the-badge&labelColor=171e29)](https://YOUR_USERNAME.github.io/cs2-tradeup-lab/)
-
-> Replace `YOUR_USERNAME` in the link above with your GitHub username after creating the repository.
+[![Open website](https://img.shields.io/badge/Open%20website-TradeUp%20Lab-b9f45a?style=for-the-badge&labelColor=171e29)](https:/patrickcioranu-ui.github.io/cs2-tradeup-lab/)
 
 This is the first offline version of a quantitative CS2 trade-up analyser. It keeps the calculation engine independent from marketplace/network code so that the model can be tested against saved data before adding live feeds.
 
