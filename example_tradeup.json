@@ -1,0 +1,27 @@
+{
+  "inputs": [
+    {"name": "Input Alpha 1", "collection": "Collection Alpha", "float_value": 0.08, "acquisition_cost": 1.20},
+    {"name": "Input Alpha 2", "collection": "Collection Alpha", "float_value": 0.11, "acquisition_cost": 1.20},
+    {"name": "Input Alpha 3", "collection": "Collection Alpha", "float_value": 0.09, "acquisition_cost": 1.20},
+    {"name": "Input Alpha 4", "collection": "Collection Alpha", "float_value": 0.14, "acquisition_cost": 1.20},
+    {"name": "Input Alpha 5", "collection": "Collection Alpha", "float_value": 0.10, "acquisition_cost": 1.20},
+    {"name": "Input Alpha 6", "collection": "Collection Alpha", "float_value": 0.12, "acquisition_cost": 1.20},
+    {"name": "Input Beta 1", "collection": "Collection Beta", "float_value": 0.07, "acquisition_cost": 1.25},
+    {"name": "Input Beta 2", "collection": "Collection Beta", "float_value": 0.13, "acquisition_cost": 1.25},
+    {"name": "Input Beta 3", "collection": "Collection Beta", "float_value": 0.16, "acquisition_cost": 1.25},
+    {"name": "Input Beta 4", "collection": "Collection Beta", "float_value": 0.09, "acquisition_cost": 1.25}
+  ],
+  "outputs_by_collection": {
+    "Collection Alpha": [
+      {"name": "Alpha Output 1", "collection": "Collection Alpha", "min_float": 0.00, "max_float": 0.50, "steam_price": 34.00, "instant_sell_price": 27.50},
+      {"name": "Alpha Output 2", "collection": "Collection Alpha", "min_float": 0.10, "max_float": 0.70, "steam_price": 8.00, "instant_sell_price": 6.40}
+    ],
+    "Collection Beta": [
+      {"name": "Beta Output 1", "collection": "Collection Beta", "min_float": 0.00, "max_float": 0.40, "steam_price": 14.00, "instant_sell_price": 11.20}
+    ]
+  },
+  "fees": {
+    "steam_fee_rate": 0.15,
+    "instant_fee_rate": 0.00
+  }
+}

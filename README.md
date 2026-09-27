@@ -1,5 +1,9 @@
 # CS2 Trade-Up Analysis MVP
 
+[![Open website](https://img.shields.io/badge/Open%20website-TradeUp%20Lab-b9f45a?style=for-the-badge&labelColor=171e29)](https://YOUR_USERNAME.github.io/cs2-tradeup-lab/)
+
+> Replace `YOUR_USERNAME` in the link above with your GitHub username after creating the repository.
+
 This is the first offline version of a quantitative CS2 trade-up analyser. It keeps the calculation engine independent from marketplace/network code so that the model can be tested against saved data before adding live feeds.
 
 ## Included in the MVP
@@ -56,3 +60,14 @@ The site will then be available at:
 `https://YOUR_USERNAME.github.io/cs2-tradeup-lab/`
 
 The deployment workflow is already included at `.github/workflows/pages.yml`.
+
+### Add the link to the repository sidebar
+
+After the first deployment:
+
+1. Open the repository's main page on GitHub.
+2. Click the gear icon beside **About**.
+3. Paste `https://YOUR_USERNAME.github.io/cs2-tradeup-lab/` into the **Website** field.
+4. Click **Save changes**.
+
+GitHub will then show the website link in the repository sidebar, while the README badge above provides a larger clickable button.
