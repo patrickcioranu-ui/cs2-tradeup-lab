@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#10151d" />
-    <meta name="description" content="A transparent quantitative CS2 trade-up analysis dashboard." />
-    <title>TradeUp Lab — Quantitative CS2 Analysis</title>
+    <meta name="description" content="Find profitable CS2 trade-ups from real Steam Market prices." />
+    <title>TradeUp Lab — CS2 Trade-Up Finder</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -16,8 +16,9 @@
           <span>TradeUp <strong>Lab</strong></span>
         </a>
         <div class="topbar-meta">
-          <span class="status-dot"></span>
-          <span>Static analysis · GitHub Pages ready</span>
+          <span class="status-dot" id="statusDot"></span>
+          <span id="priceStamp">Loading prices…</span>
+          <span id="staleNote" class="stale-note" hidden>stale prices</span>
         </div>
       </header>
 
@@ -26,63 +27,111 @@
           <div class="eyebrow"><span class="eyebrow-line"></span> QUANTITATIVE MARKET ANALYSIS</div>
           <h1>Find the trade-up edge<br /><em>before you trade.</em></h1>
           <p class="hero-copy">
-            Model collection probabilities, output floats, fees and exit liquidity in one transparent dashboard.
-            No promises. Just the numbers behind the decision.
+            Searches every one- and two-collection trade-up against real Steam Market prices, then ranks them by
+            expected profit, ROI or chance of profit. No promises. Just the numbers behind the decision.
           </p>
           <div class="hero-tags">
-            <span>Probability</span>
-            <span>Float modelling</span>
+            <span>Real skins</span>
+            <span>Weighted-float model</span>
             <span>Risk-aware EV</span>
           </div>
         </section>
 
-        <section class="workspace-grid" aria-label="Trade-up inputs">
+        <div id="dataError" class="error-box" role="alert" hidden>Couldn't load price data. The finder and calculator need it — try reloading in a minute.</div>
+
+        <section class="panel finder-panel" id="finder" aria-label="Trade-up finder">
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">01 / FINDER</span>
+              <h2>Find trade-ups</h2>
+            </div>
+            <span class="count-pill">Top 50</span>
+          </div>
+          <p class="panel-description">Set your targets. Input costs assume the worst float in each wear you buy, so results are conservative.</p>
+          <div class="controls-grid">
+            <label>Min profit chance <span class="input-with-suffix"><input id="minChance" type="number" min="0" max="100" step="1" value="50" /><span>%</span></span></label>
+            <label>Max budget <span class="input-with-suffix"><input id="maxBudget" type="number" min="0" step="0.5" placeholder="none" /><span>€</span></span></label>
+            <label>Rarity tier
+              <select id="tierSelect">
+                <option value="all">All tiers</option>
+                <option value="0">Consumer → Industrial</option>
+                <option value="1">Industrial → Mil-Spec</option>
+                <option value="2">Mil-Spec → Restricted</option>
+                <option value="3">Restricted → Classified</option>
+                <option value="4">Classified → Covert</option>
+              </select>
+            </label>
+            <label>StatTrak
+              <select id="stattrakSelect">
+                <option value="normal">Normal</option>
+                <option value="stattrak">StatTrak™</option>
+                <option value="both">Both</option>
+              </select>
+            </label>
+            <label>Sort by
+              <select id="sortSelect">
+                <option value="profit">Expected profit (€)</option>
+                <option value="roi">ROI (%)</option>
+                <option value="chance">Profit chance</option>
+              </select>
+            </label>
+            <label>Steam fee <span class="input-with-suffix"><input id="steamFee" type="number" min="0" max="99" step="0.1" value="15" /><span>%</span></span></label>
+            <label>Fixed fee <span class="input-with-suffix"><input id="fixedFee" type="number" min="0" step="0.01" value="0" /><span>€</span></span></label>
+            <div class="controls-action">
+              <button id="findButton" class="primary-button" type="button" disabled><span>Find trade-ups</span><span class="button-arrow">↗</span></button>
+            </div>
+          </div>
+          <div class="progress" id="progress" hidden><div class="progress-bar" id="progressBar"></div></div>
+          <div id="finderMessage" class="finder-message" hidden></div>
+          <div class="table-wrap" id="finderTableWrap" hidden>
+            <table>
+              <thead>
+                <tr><th>#</th><th>Inputs</th><th>Tier</th><th>Cost</th><th>EV</th><th>Profit</th><th>ROI</th><th>Chance</th><th></th></tr>
+              </thead>
+              <tbody id="finderResults"></tbody>
+            </table>
+          </div>
+          <p class="panel-description">Click a row to open it in the calculator below.</p>
+        </section>
+
+        <section class="workspace-grid calculator" id="calculator" aria-label="Trade-up calculator">
           <div class="panel inputs-panel">
             <div class="panel-heading">
               <div>
-                <span class="panel-kicker">01 / CONTRACT</span>
+                <span class="panel-kicker">02 / CALCULATOR</span>
                 <h2>Input items</h2>
               </div>
               <span class="count-pill">10 required</span>
             </div>
-            <p class="panel-description">Enter the collection, float and acquisition cost for each input.</p>
-            <div class="input-labels" aria-hidden="true">
-              <span>#</span><span>Collection</span><span>Float</span><span>Cost</span>
+            <div class="calc-options">
+              <label>Tier <select id="calcTier">
+                <option value="0">Consumer → Industrial</option>
+                <option value="1">Industrial → Mil-Spec</option>
+                <option value="2" selected>Mil-Spec → Restricted</option>
+                <option value="3">Restricted → Classified</option>
+                <option value="4">Classified → Covert</option>
+              </select></label>
+              <label class="checkbox"><input id="calcStattrak" type="checkbox" /> StatTrak™</label>
+            </div>
+            <div class="input-labels calc-labels" aria-hidden="true">
+              <span>#</span><span>Collection</span><span>Skin</span><span>Float</span><span>Cost €</span>
             </div>
             <div id="inputRows" class="input-list"></div>
             <div class="formula-note">
               <span class="formula-icon">ƒ</span>
-              <span>Output float = output minimum + average input float × output range</span>
+              <span>Output float = output min + W × output range, where W = average of each input's float scaled to its own range</span>
             </div>
           </div>
 
-          <div class="side-stack">
-            <div class="panel assumptions-panel">
-              <div class="panel-heading compact">
-                <div>
-                  <span class="panel-kicker">02 / ASSUMPTIONS</span>
-                  <h2>Exit routes</h2>
-                </div>
-              </div>
-              <p class="panel-description">Adjust fees to reflect the quote you would actually receive.</p>
-              <div class="fee-grid">
-                <label>Steam fee <span class="input-with-suffix"><input id="steamFee" type="number" min="0" max="100" step="0.1" value="15" /><span>%</span></span></label>
-                <label>Instant fee <span class="input-with-suffix"><input id="instantFee" type="number" min="0" max="100" step="0.1" value="0" /><span>%</span></span></label>
-                <label>Steam fixed fee <span class="input-with-suffix"><input id="steamFixedFee" type="number" min="0" step="0.01" value="0" /><span>€</span></span></label>
-                <label>Instant fixed fee <span class="input-with-suffix"><input id="instantFixedFee" type="number" min="0" step="0.01" value="0" /><span>€</span></span></label>
+          <div class="panel outputs-panel">
+            <div class="panel-heading compact">
+              <div>
+                <span class="panel-kicker">03 / OUTCOMES</span>
+                <h2>Possible outputs</h2>
               </div>
             </div>
-
-            <div class="panel outputs-panel">
-              <div class="panel-heading compact">
-                <div>
-                  <span class="panel-kicker">03 / OUTCOMES</span>
-                  <h2>Eligible outputs</h2>
-                </div>
-              </div>
-              <p class="panel-description">Use representative current quotes; live adapters come next.</p>
-              <div id="outputGroups"></div>
-            </div>
+            <p class="panel-description">Prices are Steam Market sale prices at each output's resulting wear. Edit any price to override it.</p>
+            <div id="outputGroups"></div>
           </div>
         </section>
 
@@ -92,7 +141,6 @@
               <div class="eyebrow"><span class="eyebrow-line"></span> 04 / DECISION VIEW</div>
               <h2>Expected value, not wishful thinking.</h2>
             </div>
-            <button id="analyzeButton" class="primary-button" type="button"><span>Run analysis</span><span class="button-arrow">↗</span></button>
           </div>
 
           <div id="errorBox" class="error-box" role="alert" hidden></div>
@@ -109,7 +157,7 @@
               <div class="table-wrap">
                 <table>
                   <thead>
-                    <tr><th>Output</th><th>Chance</th><th>Float</th><th>Steam net</th><th>Instant net</th></tr>
+                    <tr><th>Output</th><th>Chance</th><th>Float</th><th>Wear</th><th>Steam price</th><th>Net after fees</th></tr>
                   </thead>
                   <tbody id="outcomeTable"></tbody>
                 </table>
@@ -125,9 +173,10 @@
             <span class="panel-kicker">MODEL NOTES</span>
             <h2>Transparent by design.</h2>
             <p>
-              Collection selection is weighted by the number of inputs from each collection. Outputs inside a selected collection
-              are treated as equally likely. Prices are representative quotes, not guarantees; spreads, volatility, trade locks and
-              platform fees can change the result.
+              Collection selection is weighted by the number of inputs from each collection; outputs inside a collection are
+              equally likely. Output floats use CS2's weighted-float rule. Prices are Steam Market median sale prices
+              (last 24 h, via prices.csgotrader.app) converted to euros at the ECB daily rate, refreshed every 6 hours.
+              Medians are not guarantees: spreads, volatility, trade locks and fees can change the result.
             </p>
           </div>
           <div class="method-equation">
@@ -139,9 +188,9 @@
 
       <footer class="footer">
         <span>TradeUp Lab / research prototype</span>
-        <span>Built for transparent decision-making</span>
+        <span>Not affiliated with Valve or Steam</span>
       </footer>
     </div>
-    <script src="app.js" defer></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>

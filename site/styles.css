@@ -120,7 +120,31 @@ td:first-child { color: var(--ink); font-weight: 650; }
 .method-equation strong { display: block; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; margin-top: 12px; line-height: 1.5; }
 .footer { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding: 20px 0 25px; color: var(--faint); font-size: 10px; letter-spacing: .04em; }
 
+.stale-note { color: #ffcf6e; border: 1px solid rgba(255, 207, 110, .4); border-radius: 999px; padding: 2px 8px; }
+.status-dot.offline { background: var(--danger); box-shadow: 0 0 14px var(--danger); }
+.positive { color: var(--accent); }
+.negative { color: var(--danger); }
+.finder-panel { padding: 25px; margin-bottom: 18px; }
+.controls-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px 12px; margin-top: 22px; align-items: end; }
+.controls-grid label, .calc-options label { color: var(--muted); font-size: 11px; display: grid; gap: 7px; }
+.controls-action { display: flex; justify-content: flex-end; }
+.primary-button:disabled { opacity: .5; cursor: progress; transform: none; }
+.progress { height: 6px; border-radius: 999px; background: rgba(8, 12, 17, .5); margin-top: 20px; overflow: hidden; }
+.progress-bar { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.finder-message { color: var(--muted); border: 1px dashed var(--line-strong); border-radius: 11px; padding: 14px; margin-top: 20px; font-size: 12px; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td, tr.clickable:focus td { background: rgba(185, 244, 90, .05); }
+td.legs { white-space: normal; min-width: 320px; font-weight: 500; }
+.badge { display: inline-block; color: #ffcf6e; border: 1px solid rgba(255, 207, 110, .35); border-radius: 999px; padding: 2px 7px; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+.calc-options { display: flex; gap: 16px; align-items: end; margin-top: 18px; }
+.calc-options .checkbox { display: flex; align-items: center; gap: 7px; height: 32px; }
+.calc-labels, .calc-row { grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.2fr) 84px 84px; }
+.calc-output { grid-template-columns: minmax(0, 1.6fr) 60px 40px 80px; }
+.output-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.output-row span { font-size: 11px; color: #c6d1df; }
+
 @media (max-width: 1050px) {
+  .controls-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace-grid, .results-grid { grid-template-columns: 1fr; }
   .side-stack { grid-template-columns: 1fr 1fr; align-items: start; }
   .metrics-grid { grid-template-columns: repeat(3, 1fr); }
@@ -134,6 +158,9 @@ td:first-child { color: var(--ink); font-weight: 650; }
   .side-stack { grid-template-columns: 1fr; }
   .inputs-panel, .assumptions-panel, .outputs-panel, .outcomes-panel, .insight-panel { padding: 19px; }
   .input-labels, .input-row { grid-template-columns: 22px minmax(0, 1fr) 76px 76px; gap: 6px; }
+  .calc-labels, .calc-row { grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr) 64px 64px; }
+  .controls-grid { grid-template-columns: 1fr; }
+  .finder-panel { padding: 19px; }
   .input-labels { font-size: 8px; }
   .metrics-grid { grid-template-columns: 1fr 1fr; }
   .metric-card { min-height: 112px; }
