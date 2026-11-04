@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-11-04T12:00:00Z",
+  "collections": {
+    "Alpha": {
+      "2": [
+        { "id": "a1", "market_base_name": "A-cheap", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": true },
+        { "id": "a2", "market_base_name": "A-pricey", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false }
+      ],
+      "3": [
+        { "id": "a3", "market_base_name": "A-out1", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": true },
+        { "id": "a4", "market_base_name": "A-out2", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": false }
+      ]
+    },
+    "Beta": {
+      "2": [
+        { "id": "b1", "market_base_name": "B-cheap", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false },
+        { "id": "b2", "market_base_name": "B-pricey", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false }
+      ],
+      "3": [
+        { "id": "b3", "market_base_name": "B-out1", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": false },
+        { "id": "b4", "market_base_name": "B-out2", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": false }
+      ]
+    },
+    "Gamma": {
+      "2": [
+        { "id": "g1", "market_base_name": "G-lonely", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false }
+      ]
+    }
+  }
+}

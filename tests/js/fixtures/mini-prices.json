@@ -1,0 +1,30 @@
+{
+  "updated_at": "2026-11-04T12:00:00Z",
+  "currency": "EUR",
+  "sources": {
+    "steam": {
+      "fee_rate": 0.15,
+      "prices": {
+        "A-cheap (Minimal Wear)": { "price": 1.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
+        "A-pricey (Minimal Wear)": { "price": 5.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
+        "A-pricey (Field-Tested)": { "price": 4.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
+        "A-cheap (Battle-Scarred)": { "price": 0.2, "listings": 0, "seen_at": "2026-11-04T12:00:00Z" },
+        "StatTrak™ A-cheap (Minimal Wear)": { "price": 3.0, "listings": 20, "seen_at": "2026-11-04T12:00:00Z" },
+        "A-out1 (Minimal Wear)": { "price": 50.0, "listings": 40, "seen_at": "2026-11-04T12:00:00Z" },
+        "A-out1 (Field-Tested)": { "price": 10.0, "listings": 40, "seen_at": "2026-11-04T12:00:00Z" },
+        "A-out2 (Minimal Wear)": { "price": 20.0, "listings": 30, "seen_at": "2026-11-04T12:00:00Z" },
+        "A-out2 (Field-Tested)": { "price": 2.0, "listings": 30, "seen_at": "2026-11-04T12:00:00Z" },
+        "StatTrak™ A-out1 (Minimal Wear)": { "price": 100.0, "listings": 4, "seen_at": "2026-11-04T12:00:00Z" },
+        "StatTrak™ A-out1 (Field-Tested)": { "price": 20.0, "listings": 4, "seen_at": "2026-11-04T12:00:00Z" },
+        "B-cheap (Factory New)": { "price": 2.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
+        "B-cheap (Field-Tested)": { "price": 0.5, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
+        "B-pricey (Battle-Scarred)": { "price": 3.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
+        "B-out1 (Minimal Wear)": { "price": 4.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
+        "B-out1 (Field-Tested)": { "price": 3.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
+        "B-out2 (Minimal Wear)": { "price": 4.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
+        "B-out2 (Field-Tested)": { "price": 1.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
+        "G-lonely (Field-Tested)": { "price": 0.1, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" }
+      }
+    }
+  }
+}

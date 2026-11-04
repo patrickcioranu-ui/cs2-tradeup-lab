@@ -1,0 +1,85 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { inputOptions, findTradeUps } from "../../site/finder.js";
+
+const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
+const catalog = load("mini-catalog.json");
+const prices = load("mini-prices.json");
+// Local stand-in for data.js priceLookup (Task 8), see ledger pre-flight ruling.
+const lookup = (name) => prices.sources.steam.prices[name];
+const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
+
+const base = { minProfitChance: 0, maxBudget: null, tiers: [2], stattrak: "normal", sortBy: "profit", limit: 50, feeRate: 0, fixedFee: 0 };
+const run = (opts) => findTradeUps(catalog, lookup, { ...base, ...opts });
+const legKey = (r) => r.legs.map((l) => `${l.count}x${l.option.skin.market_base_name}:${l.option.wear}`).sort().join("+");
+
+test("inputOptions keeps cheapest per wear and prunes dominated / unlisted options", () => {
+  const options = inputOptions(catalog, lookup, 2, false);
+  assert.deepEqual(options.get("Alpha").map((o) => `${o.skin.market_base_name}:${o.wear}`), ["A-cheap:MW"]);
+  assert.deepEqual(options.get("Beta").map((o) => `${o.skin.market_base_name}:${o.wear}`).sort(), ["B-cheap:FN", "B-cheap:FT"]);
+  assert.equal(options.has("Gamma"), false, "collection without next tier skipped");
+  const mw = options.get("Alpha")[0];
+  close(mw.float, 0.1499);
+  close(mw.norm, 0.1499);
+  assert.equal(mw.price, 1);
+});
+
+test("best trade-up by profit matches hand calculation", () => {
+  const [best, second] = run({});
+  assert.equal(legKey(best), "10xA-cheap:MW");
+  close(best.analysis.cost, 10);
+  close(best.analysis.profit, 25);
+  close(best.analysis.pProfit, 1);
+  assert.equal(best.lowLiquidity, false);
+  assert.equal(legKey(second), "1xB-cheap:FN+9xA-cheap:MW");
+  close(second.analysis.profit, 20.9);
+  close(second.analysis.pProfit, 0.9);
+});
+
+test("candidate landing on an unpriced FN output is never returned", () => {
+  const keys = run({}).map(legKey);
+  assert.ok(!keys.includes("10xB-cheap:FN"));
+  assert.ok(keys.includes("10xB-cheap:FT"));
+});
+
+test("minProfitChance filters", () => {
+  const results = run({ minProfitChance: 0.95 });
+  assert.ok(results.length > 0);
+  assert.ok(results.every((r) => r.analysis.pProfit >= 0.95));
+  assert.ok(!results.map(legKey).includes("1xB-cheap:FN+9xA-cheap:MW"));
+});
+
+test("maxBudget filters", () => {
+  const keys = run({ maxBudget: 10.5 }).map(legKey);
+  assert.ok(keys.includes("10xA-cheap:MW"));
+  assert.ok(!keys.includes("1xB-cheap:FN+9xA-cheap:MW"));
+});
+
+test("stattrak mode only returns StatTrak trade-ups from collections that have them", () => {
+  const results = run({ stattrak: "stattrak" });
+  assert.equal(results.length, 1);
+  assert.equal(results[0].stattrak, true);
+  assert.equal(legKey(results[0]), "10xA-cheap:MW");
+  close(results[0].analysis.profit, 70);
+  assert.equal(results[0].lowLiquidity, true);
+  assert.equal(run({ stattrak: "both" }).filter((r) => r.stattrak).length, 1);
+});
+
+test("sortBy reorders results", () => {
+  const ftK9 = "1xB-cheap:FT+9xA-cheap:MW";
+  const fnK4 = "4xA-cheap:MW+6xB-cheap:FN";
+  const byProfit = run({ sortBy: "profit" }).map(legKey);
+  const byChance = run({ sortBy: "chance" }).map(legKey);
+  assert.ok(byProfit.indexOf(fnK4) < byProfit.indexOf(ftK9));
+  assert.ok(byChance.indexOf(ftK9) < byChance.indexOf(fnK4));
+  const byRoi = run({ sortBy: "roi" });
+  for (let i = 1; i < byRoi.length; i++) assert.ok(byRoi[i - 1].analysis.roi >= byRoi[i].analysis.roi);
+});
+
+test("limit caps results and progress ends at 1", () => {
+  const progress = [];
+  const results = findTradeUps(catalog, lookup, { ...base, limit: 3 }, (p) => progress.push(p));
+  assert.equal(results.length, 3);
+  assert.equal(progress.at(-1), 1);
+});
