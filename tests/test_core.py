@@ -1,6 +1,7 @@
 import unittest
 
 from cs2_tradeup import InputItem, OutputSkin, analyze_trade_up, enumerate_outcomes, output_float
+from cs2_tradeup.core import normalized_float
 
 
 def make_inputs():
@@ -15,6 +16,21 @@ class TradeUpCoreTests(unittest.TestCase):
         inputs = [InputItem(str(i), "A", 0.2, 1.0) for i in range(10)]
         output = OutputSkin("out", "A", 0.10, 0.60, 10.0, 8.0)
         self.assertAlmostEqual(output_float(inputs, output), 0.20)
+
+    def test_weighted_float_spectrogram(self):
+        # Spec §4.2 example: 10x M249 | Spectrogram (0-0.50) at 0.15 -> W = 0.30
+        inputs = [InputItem(str(i), "A", 0.15, 1.0, min_float=0.0, max_float=0.50) for i in range(10)]
+        self.assertAlmostEqual(output_float(inputs, OutputSkin("Crossfade", "A", 0.0, 0.50, 1.0, 1.0)), 0.15)
+        self.assertAlmostEqual(output_float(inputs, OutputSkin("Halftone", "A", 0.0, 0.60, 1.0, 1.0)), 0.18)
+        self.assertAlmostEqual(output_float(inputs, OutputSkin("Berry", "A", 0.0, 0.80, 1.0, 1.0)), 0.24)
+
+    def test_zero_range_input_normalises_to_zero(self):
+        item = InputItem("fixed", "A", 0.3, 1.0, min_float=0.3, max_float=0.3)
+        self.assertEqual(normalized_float(item), 0.0)
+
+    def test_input_outside_own_range_rejected(self):
+        with self.assertRaises(ValueError):
+            InputItem("bad", "A", 0.6, 1.0, min_float=0.0, max_float=0.5)
 
     def test_collection_weight_and_output_probability(self):
         outputs = {

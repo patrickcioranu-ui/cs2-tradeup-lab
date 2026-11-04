@@ -20,10 +20,14 @@ class InputItem:
     collection: str
     float_value: float
     acquisition_cost: float
+    min_float: float = 0.0
+    max_float: float = 1.0
 
     def __post_init__(self) -> None:
-        if not 0.0 <= self.float_value <= 1.0:
-            raise ValueError("Input float must be between 0 and 1")
+        if not 0.0 <= self.min_float <= self.max_float <= 1.0:
+            raise ValueError("Input skin float range must be inside [0, 1]")
+        if not self.min_float <= self.float_value <= self.max_float:
+            raise ValueError("Input float must be inside the skin's own float range")
         if self.acquisition_cost < 0.0:
             raise ValueError("Acquisition cost cannot be negative")
 
@@ -109,13 +113,26 @@ class Analysis:
         raise ValueError("route must be 'steam' or 'instant'")
 
 
+def normalized_float(item: InputItem) -> float:
+    """Scale an input's float to 0..1 within its own skin range (0 for a fixed-float skin)."""
+    span = item.max_float - item.min_float
+    if span == 0.0:
+        return 0.0
+    return (item.float_value - item.min_float) / span
+
+
 def output_float(inputs: Iterable[InputItem], output: OutputSkin) -> float:
-    """Calculate the output float using the standard trade-up formula."""
+    """Calculate the output float with CS2's weighted-float formula (spec §4.2).
+
+    Each input is normalised by its own skin range, the ten values are averaged
+    (W), and W is mapped onto the output's range. With 0..1 input ranges this
+    equals the old plain-average formula.
+    """
     inputs = tuple(inputs)
     if not inputs:
         raise ValueError("At least one input is required")
-    average_input_float = sum(item.float_value for item in inputs) / len(inputs)
-    return output.min_float + average_input_float * (output.max_float - output.min_float)
+    weighted = sum(normalized_float(item) for item in inputs) / len(inputs)
+    return output.min_float + weighted * (output.max_float - output.min_float)
 
 
 def net_sale_price(gross_price: float, fee_rate: float, fixed_fee: float = 0.0) -> float:
