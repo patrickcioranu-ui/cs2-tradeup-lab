@@ -1,71 +1,74 @@
-# CS2 Trade-Up Analysis MVP
+# TradeUp Lab — CS2 Trade-Up Finder
 
-[![Open website](https://img.shields.io/badge/Open%20website-TradeUp%20Lab-b9f45a?style=for-the-badge&labelColor=171e29)](https:/patrickcioranu-ui.github.io/cs2-tradeup-lab/)
+[![Open website](https://img.shields.io/badge/Open%20website-TradeUp%20Lab-b9f45a?style=for-the-badge&labelColor=171e29)](https://patrickcioranu-ui.github.io/cs2-tradeup-lab/)
 
-This is the first offline version of a quantitative CS2 trade-up analyser. It keeps the calculation engine independent from marketplace/network code so that the model can be tested against saved data before adding live feeds.
+TradeUp Lab searches CS2 trade-up contracts against real Steam Market prices and ranks them by expected profit,
+ROI or chance of profit.
 
-## Included in the MVP
+## What it does
 
-- Standard ten-input trade-up validation.
-- Collection-weighted output probabilities.
-- Output-float calculation from the average input float:
+- **Finder:** searches every single-collection and two-collection trade-up (splits 1/9 … 9/1) for each rarity step,
+  normal and/or StatTrak™. You set a minimum profit chance, a max budget, the tier, StatTrak mode and the sort order;
+  it shows the top 50 results in about 1–3 seconds (in a background thread).
+- **Calculator:** pick real collections and skins for the 10 inputs, set floats, and see every possible output with
+  its float, wear, Steam price, net after fees, expected value, profit chance and risk. Clicking a finder result loads
+  it here.
+- **Low-liquidity warning:** shown when an output had no Steam sales in the last 24 hours.
 
-  `output_float = output_min + average_input_float * (output_max - output_min)`
+## Model and assumptions
 
-- Configurable Steam and instant-sell fee models.
-- Expected net proceeds and expected profit.
-- Probability of making a profit.
-- Proceeds standard deviation as a simple risk measure.
-- Comparison of Steam and instant-sell exits.
+- **Output float:** CS2's weighted-float rule. Each input float is scaled to its own skin range, the ten values are
+  averaged (W), and W is mapped onto each output's range: `out = out_min + W × (out_max − out_min)`.
+  Sources: SteamDB's trade-up guide and CSDelta's weighted-float article (both Jul 2026).
+- **Probabilities:** a collection's chance = its share of the 10 inputs; outputs within a collection are equally likely.
+- **Input cost:** the price of the wear you buy, assuming you get the *worst* float inside that wear, so results are
+  conservative.
+- **Prices:** Steam Market median sale price over the last 24 h (falling back to 7/30/90 days), taken from the public
+  [prices.csgotrader.app](https://prices.csgotrader.app/latest/steam.json) Steam dump and converted from USD to EUR with
+  the ECB daily rate. Medians are not guaranteed buy/sell prices.
+- **Exit:** Steam only, 15% fee by default (adjustable). Third-party instant-sell sites can be added later as extra
+  price sources.
+- **Not covered yet:** knife/glove trade-ups (5 Covert inputs), souvenir inputs, and mixes of three or more collections.
 
-## Run the example
+## Data refresh
+
+`site/data/catalog.json` (skins, from the open-source [ByMykel CSGO-API](https://github.com/ByMykel/CSGO-API)) and
+`site/data/prices.json` are rebuilt every 6 hours by the **Refresh price data** GitHub Action, which commits them and
+triggers a Pages redeploy.
+
+To refresh now: **Actions → Refresh price data → Run workflow**.
+
+To refresh locally:
 
 ```bash
-python tradeup_cli.py data/example_tradeup.json
+python scripts/update_data.py
 ```
 
-## Run tests
+## Development
+
+Requirements: Python 3.12+, Node 22+. No third-party packages.
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The sample values are illustrative, not live market quotes. The next stage should add an ingestion layer that uses permitted public APIs, exports or manually saved quotes, normalises item identifiers, stores timestamped prices and records fees/marketplace assumptions. That will let us back-test whether an apparent edge survives spreads, liquidity and price changes.
-
-## GitHub Pages website
-
-The interactive website is in `site/`. It runs entirely in the browser and uses the same trade-up logic as the MVP, with editable inputs, fees, output quotes and a decision view.
-
-### Push it to GitHub
-
-1. Create a new empty repository on GitHub, for example `cs2-tradeup-lab`. Do not initialise it with another README or `.gitignore`.
-2. From this project folder, run:
-
 ```bash
-git init
-git add .
-git commit -m "Initial TradeUp Lab website"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/cs2-tradeup-lab.git
-git push -u origin main
+npm test
 ```
 
-3. In the repository, open **Settings → Pages** and choose **GitHub Actions** as the source.
-4. Open the **Actions** tab and wait for `Deploy TradeUp Lab to GitHub Pages` to finish.
+Serve the site locally:
 
-The site will then be available at:
+```bash
+python -m http.server 8000 -d site
+```
 
-`https://YOUR_USERNAME.github.io/cs2-tradeup-lab/`
+The command-line analyser still works on saved data:
 
-The deployment workflow is already included at `.github/workflows/pages.yml`.
+```bash
+python tradeup_cli.py data/example_tradeup.json
+```
 
-### Add the link to the repository sidebar
+## Deployment
 
-After the first deployment:
-
-1. Open the repository's main page on GitHub.
-2. Click the gear icon beside **About**.
-3. Paste `https://YOUR_USERNAME.github.io/cs2-tradeup-lab/` into the **Website** field.
-4. Click **Save changes**.
-
-GitHub will then show the website link in the repository sidebar, while the README badge above provides a larger clickable button.
+GitHub Pages must use **Settings → Pages → Source: GitHub Actions**. The `Deploy TradeUp Lab to GitHub Pages`
+workflow publishes the `site/` folder on every push to `main` and after every price refresh.

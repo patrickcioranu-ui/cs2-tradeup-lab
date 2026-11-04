@@ -80,6 +80,16 @@ All network access to Steam happens in the Action, never in the browser
 - Structure: `{ generated_at, collections: { <name>: { <tier>: [skin, ...] } } }`.
 
 ### 3.3 Prices — `site/data/prices.json`
+
+> **Amended 2026-11-04 during implementation (user decision):** Steam's search
+> endpoint ignores `currency` (always USD), serves only 10 results per page and
+> answers HTTP 429 for minutes after ~18 anonymous pages, so a full crawl every
+> 6 h is not workable. Prices now come from the public
+> `https://prices.csgotrader.app/latest/steam.json` dump (Steam Market median
+> sale prices; `last_24h`, falling back to 7/30/90-day), converted USD→EUR with
+> the ECB rate. Entries carry `listings: null` and `sold_24h`; the low-liquidity
+> badge means "an output had no Steam sales in the last 24 h". The direct Steam
+> crawl below is kept in code (tested) for a possible future hybrid.
 - Source: `https://steamcommunity.com/market/search/render/?appid=730&norender=1&count=100&start=N`
   paged until all results are read; ~3 s pause between pages; exponential
   back-off on HTTP 429 (max 5 retries per page).
