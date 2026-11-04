@@ -35,10 +35,12 @@ export function marketName(baseName, wearCode, stattrak) {
 }
 
 export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0 }) {
-  const cost = inputs.reduce((sum, i) => sum + i.cost, 0);
+  // An input without a known cost is never treated as free.
+  const missingInputs = inputs.filter((i) => !Number.isFinite(i.cost)).length;
+  const cost = missingInputs ? null : inputs.reduce((sum, i) => sum + i.cost, 0);
   const collections = [...new Set(inputs.map((i) => i.collection))];
   const outcomes = [];
-  let complete = true;
+  let complete = missingInputs === 0;
 
   for (const collection of collections) {
     const eligible = outputsByCollection[collection] || [];
@@ -71,7 +73,7 @@ export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0
   const counts = outcomes.map((o) => o.listings).filter((n) => Number.isFinite(n));
   const minListings = counts.length ? Math.min(...counts) : null;
   const illiquid = outcomes.some((o) => o.sold24h === false);
-  const base = { complete, cost, outcomes, minListings, illiquid };
+  const base = { complete, cost, outcomes, minListings, illiquid, missingInputs };
   if (!complete) return { ...base, ev: null, profit: null, roi: null, pProfit: null, risk: null };
 
   const ev = outcomes.reduce((s, o) => s + o.probability * o.net, 0);

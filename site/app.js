@@ -137,7 +137,7 @@ function resetRow(row, collection) {
   row.collection = collection;
   row.skinId = skin.id;
   row.float = clampFloat(skin, row.float);
-  row.cost = quotePrice(skin, row.float) ?? 0;
+  row.cost = quotePrice(skin, row.float) ?? null;
 }
 
 function resetCalculator() {
@@ -182,7 +182,7 @@ function renderInputs() {
           ${skins.map((s) => `<option value="${escapeHtml(s.id)}" ${s.id === row.skinId ? "selected" : ""}>${escapeHtml(s.market_base_name)}</option>`).join("")}
         </select>
         <input data-field="float" type="number" min="${skin.min_float}" max="${skin.max_float}" step="0.0001" value="${row.float.toFixed(4)}" aria-label="Input ${index + 1} float" title="${WEAR_NAME[wearForFloat(row.float)]} · range ${skin.min_float}–${skin.max_float}" />
-        <input data-field="cost" type="number" min="0" step="0.01" value="${row.cost.toFixed(2)}" aria-label="Input ${index + 1} cost" />
+        <input data-field="cost" type="number" min="0" step="0.01" value="${row.cost === null ? "" : row.cost.toFixed(2)}" placeholder="missing" aria-label="Input ${index + 1} cost" />
       </div>`;
   }).join("");
 }
@@ -234,9 +234,10 @@ function metric(label, value, sub, positive = false) {
 }
 
 function renderAnalysis(analysis) {
-  const missing = analysis.outcomes.filter((o) => o.gross === null);
+  const missing = analysis.outcomes.filter((o) => o.gross === null).map((o) => `Missing price for ${o.name} (${WEAR_NAME[o.wear]}) — enter it manually`);
+  if (analysis.missingInputs) missing.unshift(`${analysis.missingInputs} input${analysis.missingInputs > 1 ? "s have" : " has"} no Steam price — enter the cost manually`);
   if (missing.length) {
-    $("#errorBox").textContent = missing.map((o) => `Missing price for ${o.name} (${WEAR_NAME[o.wear]}) — enter it manually`).join(". ");
+    $("#errorBox").textContent = missing.join(". ");
     $("#errorBox").hidden = false;
     $("#metrics").innerHTML = "";
     $("#outcomeTable").innerHTML = "";
@@ -292,11 +293,11 @@ function onInputChange(event) {
     if (field === "skin") row.skinId = el.value;
     const skin = findSkin(row);
     row.float = clampFloat(skin, field === "float" ? Number(el.value) : row.float);
-    row.cost = quotePrice(skin, row.float) ?? row.cost;
+    row.cost = quotePrice(skin, row.float) ?? null;
   }
   if (field === "cost") {
     const cost = Number(el.value);
-    row.cost = Number.isFinite(cost) && cost >= 0 ? cost : row.cost;
+    row.cost = el.value.trim() === "" ? null : Number.isFinite(cost) && cost >= 0 ? cost : row.cost;
   }
   renderCalculator();
 }

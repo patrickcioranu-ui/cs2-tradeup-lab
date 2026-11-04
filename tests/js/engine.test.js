@@ -104,6 +104,20 @@ test("analyze ignores missing listing counts and flags outputs with no 24h sales
   assert.equal(liquidOnly.illiquid, false);
 });
 
+test("analyze treats an input without a cost as incomplete, never as free", () => {
+  const inputs = tenOf("A", 1);
+  inputs[3] = { ...inputs[3], cost: null };
+  const result = analyze({
+    inputs,
+    outputsByCollection: { A: [{ name: "out", minFloat: 0, maxFloat: 1, prices: allWears(20) }] },
+    feeRate: 0,
+  });
+  assert.equal(result.complete, false);
+  assert.equal(result.missingInputs, 1);
+  assert.equal(result.profit, null);
+  assert.equal(result.cost, null);
+});
+
 test("analyze reports incomplete when an outcome's wear has no price", () => {
   const result = analyze({
     inputs: tenOf("A", 1, 0.01),
