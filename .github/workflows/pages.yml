@@ -1,11 +1,15 @@
 name: Deploy TradeUp Lab to GitHub Pages
 
+# Builds fresh skin + price data and publishes site/ to Pages.
+# Data is never committed: each run fetches it and ships it inside the Pages
+# artifact. If the data refresh fails, the deploy is skipped and the previous
+# live site (with its last good data) stays up.
+
 on:
   push:
     branches: ["main"]
-  workflow_run:
-    workflows: ["Refresh price data"]
-    types: [completed]
+  schedule:
+    - cron: "0 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -23,9 +27,18 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build catalog and Steam price data
+        run: python scripts/update_data.py
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

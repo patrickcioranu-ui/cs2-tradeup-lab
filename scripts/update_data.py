@@ -37,7 +37,10 @@ def run(data_dir: Path, fetch_catalog: Callable[[], dict], fetch_prices: Callabl
     data_dir.mkdir(parents=True, exist_ok=True)
     try:
         _write(data_dir / "catalog.json", fetch_catalog())
-    except Exception as err:  # keep the previous catalog
+    except Exception as err:  # keep the previous catalog, if there is one
+        if not (data_dir / "catalog.json").exists():
+            print(f"catalog refresh failed and no previous catalog exists: {err}", file=sys.stderr)
+            return 1
         print(f"catalog refresh failed, keeping previous file: {err}", file=sys.stderr)
 
     try:

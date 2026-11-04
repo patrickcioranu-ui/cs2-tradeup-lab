@@ -43,6 +43,11 @@ class UpdateDataTests(unittest.TestCase):
         self.assertEqual(self.read("catalog.json"), '{"old": true}')
         self.assertTrue((self.dir / "prices.json").exists())
 
+    def test_catalog_failure_without_previous_catalog_fails(self):
+        code = run(self.dir, boom, lambda: (FRESH, True, 1.1), NOW)
+        self.assertEqual(code, 1)
+        self.assertFalse((self.dir / "catalog.json").exists())
+
     def test_no_prices_fetched_keeps_old_prices_and_fails(self):
         (self.dir / "prices.json").write_text('{"old": true}', encoding="utf-8")
         code = run(self.dir, lambda: CATALOG, lambda: ({}, False, 1.1), NOW)
