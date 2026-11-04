@@ -3,6 +3,9 @@ name: Deploy TradeUp Lab to GitHub Pages
 on:
   push:
     branches: ["main"]
+  workflow_run:
+    workflows: ["Refresh price data"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:

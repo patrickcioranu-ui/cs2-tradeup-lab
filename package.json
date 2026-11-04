@@ -1,0 +1,8 @@
+{
+  "name": "cs2-tradeup-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/js/*.test.js"
+  }
+}
