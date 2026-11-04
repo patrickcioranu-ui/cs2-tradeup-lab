@@ -8,6 +8,7 @@ from cs2_tradeup.steam_prices import (
     fetch_all,
     fetch_ecb_usd_per_eur,
     merge_prices,
+    parse_csgotrader,
     parse_search_page,
 )
 
@@ -44,6 +45,23 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(prices["AK-47 | Aphrodite (Field-Tested)"], {"price": 8.72, "listings": 791, "seen_at": SEEN})
         self.assertEqual(parse_search_page(payload, 1.0, SEEN)["AK-47 | Aphrodite (Factory New)"]["price"], 273.82)
         self.assertEqual(len(prices), 3)
+
+    def test_csgotrader_uses_24h_median_and_falls_back(self):
+        payload = {
+            "AK-47 | Redline (Field-Tested)": {"last_24h": 43.56, "last_7d": 42.8, "last_30d": 43.51, "last_90d": 43.91},
+            "Rare Thing (Factory New)": {"last_24h": None, "last_7d": None, "last_30d": 10.0, "last_90d": 9.0},
+            "Dead Item (Battle-Scarred)": {"last_24h": None, "last_7d": None, "last_30d": None, "last_90d": None},
+        }
+        prices = parse_csgotrader(payload, 0.5, SEEN)
+        self.assertEqual(prices["AK-47 | Redline (Field-Tested)"], {"price": 21.78, "listings": None, "sold_24h": True, "seen_at": SEEN})
+        self.assertEqual(prices["Rare Thing (Factory New)"], {"price": 5.0, "listings": None, "sold_24h": False, "seen_at": SEEN})
+        self.assertNotIn("Dead Item (Battle-Scarred)", prices)
+
+    def test_gzip_body_is_decompressed(self):
+        import gzip
+        from cs2_tradeup.steam_prices import decode_body
+        self.assertEqual(decode_body(gzip.compress(b'{"a": 1}')), b'{"a": 1}')
+        self.assertEqual(decode_body(b'{"a": 1}'), b'{"a": 1}')
 
     def test_ecb_rate_parsed(self):
         xml = "<Cube><Cube time='2026-11-04'><Cube currency='USD' rate='1.1267'/><Cube currency='JPY' rate='178.30'/></Cube></Cube>"
@@ -117,6 +135,7 @@ class MergeTests(unittest.TestCase):
         self.assertEqual(set(steam["prices"]), {"recent", "updated"})
         self.assertEqual(steam["prices"]["updated"]["price"], 4.0)
         self.assertEqual(steam["fee_rate"], 0.15)
+        self.assertEqual(steam["via"], "prices.csgotrader.app")
         self.assertEqual(merged["updated_at"], SEEN)
         self.assertEqual(merged["currency"], "EUR")
         self.assertEqual(merged["fx_rate"], 1.1267)

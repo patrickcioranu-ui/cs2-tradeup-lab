@@ -81,6 +81,29 @@ test("analyze weights collections by input count", () => {
   close(p.B1, 0.4);
 });
 
+test("analyze ignores missing listing counts and flags outputs with no 24h sales", () => {
+  const prices = (sold) => Object.fromEntries(WEARS.map((w) => [w.code, { price: 5, listings: null, sold_24h: sold }]));
+  const result = analyze({
+    inputs: tenOf("A", 1),
+    outputsByCollection: {
+      A: [
+        { name: "liquid", minFloat: 0, maxFloat: 1, prices: prices(true) },
+        { name: "thin", minFloat: 0, maxFloat: 1, prices: prices(false) },
+      ],
+    },
+    feeRate: 0,
+  });
+  assert.equal(result.minListings, null);
+  assert.equal(result.illiquid, true);
+  const liquidOnly = analyze({
+    inputs: tenOf("A", 1),
+    outputsByCollection: { A: [{ name: "liquid", minFloat: 0, maxFloat: 1, prices: allWears(5, 7) }] },
+    feeRate: 0,
+  });
+  assert.equal(liquidOnly.minListings, 7);
+  assert.equal(liquidOnly.illiquid, false);
+});
+
 test("analyze reports incomplete when an outcome's wear has no price", () => {
   const result = analyze({
     inputs: tenOf("A", 1, 0.01),

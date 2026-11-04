@@ -77,6 +77,18 @@ test("sortBy reorders results", () => {
   for (let i = 1; i < byRoi.length; i++) assert.ok(byRoi[i - 1].analysis.roi >= byRoi[i].analysis.roi);
 });
 
+test("quotes without listing counts are usable; an output with no 24h sales marks low liquidity", () => {
+  const medianLookup = (name) => {
+    const q = lookup(name);
+    if (!q || q.listings === 0) return q;
+    return { price: q.price, listings: null, sold_24h: name !== "A-out2 (Minimal Wear)" };
+  };
+  const [best] = findTradeUps(catalog, medianLookup, base);
+  assert.equal(legKey(best), "10xA-cheap:MW");
+  assert.equal(best.analysis.minListings, null);
+  assert.equal(best.lowLiquidity, true);
+});
+
 test("limit caps results and progress ends at 1", () => {
   const progress = [];
   const results = findTradeUps(catalog, lookup, { ...base, limit: 3 }, (p) => progress.push(p));

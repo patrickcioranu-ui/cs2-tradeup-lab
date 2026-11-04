@@ -1,12 +1,18 @@
-"""Fetch CS2 weapon-skin prices from the Steam Community Market search endpoint.
+"""CS2 Steam Market prices.
 
-Findings (2026-11-04): the endpoint ignores ``currency`` and always returns USD
-cents, and it caps pages at 10 results regardless of ``count``. Prices are
-converted to EUR with the ECB daily reference rate.
+Primary source: the public prices.csgotrader.app Steam dump — Steam Market
+median sale prices (USD) for every item in one download.
+
+The direct Steam search crawl (``fetch_all``) is kept for a possible future
+hybrid that adds listing counts. Findings (2026-11-04): Steam's search endpoint
+ignores ``currency`` (always USD cents), caps pages at 10 results, and answers
+HTTP 429 for minutes after ~18 anonymous pages, so a full crawl every 6 h is not
+workable. Prices are converted to EUR with the ECB daily reference rate.
 """
 
 from __future__ import annotations
 
+import gzip
 import json
 import re
 import urllib.error
@@ -18,6 +24,9 @@ from typing import Callable
 USER_AGENT = "TradeUpLab-data-refresh/1.0"
 SEARCH_URL = "https://steamcommunity.com/market/search/render/"
 ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
+CSGOTRADER_URL = "https://prices.csgotrader.app/latest/steam.json"
+PRICE_VIA = "prices.csgotrader.app"
+MEDIAN_KEYS = ("last_24h", "last_7d", "last_30d", "last_90d")
 WEAPON_TYPES = (
     "tag_CSGO_Type_Rifle", "tag_CSGO_Type_Pistol", "tag_CSGO_Type_SMG", "tag_CSGO_Type_Shotgun",
     "tag_CSGO_Type_SniperRifle", "tag_CSGO_Type_Machinegun", "tag_CSGO_Type_Equipment",
@@ -43,6 +52,23 @@ def parse_search_page(payload: dict, fx: float, seen_at: str) -> dict[str, dict]
         r["hash_name"]: {"price": round(r["sell_price"] / 100 * fx, 2), "listings": r["sell_listings"], "seen_at": seen_at}
         for r in payload.get("results") or []
     }
+
+
+def parse_csgotrader(payload: dict, fx: float, seen_at: str) -> dict[str, dict]:
+    """Map market name -> {price (EUR), listings: None, sold_24h, seen_at}.
+
+    Uses the 24 h median sale price, falling back to 7/30/90-day medians; items
+    with no recent sales at all are dropped. ``fx`` is EUR per USD.
+    """
+    prices = {}
+    for name, entry in payload.items():
+        if not isinstance(entry, dict):
+            continue
+        usd = next((entry[k] for k in MEDIAN_KEYS if isinstance(entry.get(k), (int, float)) and entry[k] > 0), None)
+        if usd is None:
+            continue
+        prices[name] = {"price": round(usd * fx, 2), "listings": None, "sold_24h": bool(entry.get("last_24h")), "seen_at": seen_at}
+    return prices
 
 
 def fetch_all(get_json: Callable[[int], dict], sleep: Callable[[float], None], fx: float, seen_at: str) -> tuple[dict, bool]:
@@ -90,15 +116,20 @@ def merge_prices(previous: dict | None, fresh: dict, now: datetime, complete: bo
         "currency": "EUR",
         "fx_rate": fx_rate,
         "complete": complete,
-        "sources": {"steam": {"fee_rate": STEAM_FEE_RATE, "prices": dict(sorted(kept.items()))}},
+        "sources": {"steam": {"fee_rate": STEAM_FEE_RATE, "via": PRICE_VIA, "prices": dict(sorted(kept.items()))}},
     }
+
+
+def decode_body(raw: bytes) -> bytes:
+    """Some hosts gzip responses even without Accept-Encoding; detect by magic bytes."""
+    return gzip.decompress(raw) if raw[:2] == b"\x1f\x8b" else raw
 
 
 def _request(url: str) -> bytes:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return resp.read()
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return decode_body(resp.read())
     except urllib.error.HTTPError as err:
         if err.code == 429:
             raise RateLimited() from err

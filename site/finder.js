@@ -28,7 +28,7 @@ export function inputOptions(catalog, lookup, tier, stattrak) {
       for (const skin of inputs) {
         if (!wearAvailable(skin, wear)) continue;
         const quote = lookup(marketName(skin.market_base_name, wear.code, stattrak));
-        if (!quote || !(quote.price > 0) || !quote.listings) continue;
+        if (!quote || !(quote.price > 0) || quote.listings === 0) continue;
         if (!best || quote.price < best.price) {
           const float = worstFloat(skin, wear);
           best = { collection: name, skin, wear: wear.code, float, norm: normalizeFloat(float, skin.min_float, skin.max_float), price: quote.price, listings: quote.listings };
@@ -103,7 +103,8 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
     for (const l of legs) outputsByCollection[l.option.collection] = pools[l.option.collection];
     const analysis = analyze({ inputs: legsToInputs(legs), outputsByCollection, feeRate, fixedFee });
     if (!analysis.complete || analysis.pProfit < minProfitChance - 1e-12) return;
-    kept.push({ tier, stattrak: st, legs, analysis, lowLiquidity: analysis.minListings < LOW_LIQUIDITY });
+    const lowLiquidity = analysis.illiquid || (analysis.minListings !== null && analysis.minListings < LOW_LIQUIDITY);
+    kept.push({ tier, stattrak: st, legs, analysis, lowLiquidity });
     if (kept.length > limit * 20) kept = kept.sort(compare).slice(0, limit);
   };
   const report = () => {

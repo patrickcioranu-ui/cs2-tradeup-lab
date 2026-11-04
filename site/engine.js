@@ -62,12 +62,16 @@ export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0
         gross,
         net: gross === null ? null : netSale(gross, feeRate, fixedFee),
         listings: quote ? quote.listings ?? null : null,
+        sold24h: quote ? quote.sold_24h ?? null : null,
       });
     }
   }
 
-  const minListings = outcomes.reduce((m, o) => Math.min(m, o.listings ?? 0), Infinity);
-  const base = { complete, cost, outcomes, minListings: Number.isFinite(minListings) ? minListings : 0 };
+  // Listing counts may be unknown (median-price source); ignore nulls.
+  const counts = outcomes.map((o) => o.listings).filter((n) => Number.isFinite(n));
+  const minListings = counts.length ? Math.min(...counts) : null;
+  const illiquid = outcomes.some((o) => o.sold24h === false);
+  const base = { complete, cost, outcomes, minListings, illiquid };
   if (!complete) return { ...base, ev: null, profit: null, roi: null, pProfit: null, risk: null };
 
   const ev = outcomes.reduce((s, o) => s + o.probability * o.net, 0);

@@ -1,14 +1,13 @@
 """Refresh site/data/catalog.json and site/data/prices.json.
 
 Run from the repository root: ``python scripts/update_data.py``.
-A full Steam pass takes roughly 65-90 minutes (Steam serves 10 items per page).
+Prices come from the prices.csgotrader.app Steam dump (one download).
 """
 
 from __future__ import annotations
 
 import json
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -18,18 +17,19 @@ sys.path.insert(0, str(ROOT))
 
 from cs2_tradeup.catalog import SKINS_URL, build_catalog  # noqa: E402
 from cs2_tradeup.steam_prices import (  # noqa: E402
-    fetch_all,
+    CSGOTRADER_URL,
     fetch_ecb_usd_per_eur,
     http_get_text,
     merge_prices,
-    steam_get_json,
+    parse_csgotrader,
 )
 
 ISO = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def _write(path: Path, data: dict) -> None:
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    # Compact JSON: prices.json holds ~30k entries and is loaded by the browser.
+    path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
 
 
 def run(data_dir: Path, fetch_catalog: Callable[[], dict], fetch_prices: Callable[[], tuple], now: datetime) -> int:
@@ -65,8 +65,8 @@ def main() -> int:
 
     def fetch_prices() -> tuple:
         usd_per_eur = fetch_ecb_usd_per_eur(http_get_text)
-        prices, complete = fetch_all(steam_get_json, time.sleep, 1 / usd_per_eur, seen_at)
-        return prices, complete, usd_per_eur
+        prices = parse_csgotrader(json.loads(http_get_text(CSGOTRADER_URL)), 1 / usd_per_eur, seen_at)
+        return prices, bool(prices), usd_per_eur
 
     return run(ROOT / "site" / "data", fetch_catalog, fetch_prices, now)
 
