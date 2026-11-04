@@ -34,6 +34,14 @@ export function marketName(baseName, wearCode, stattrak) {
   return `${stattrak ? "StatTrak™ " : ""}${baseName} (${WEAR_BY_CODE[wearCode].name})`;
 }
 
+// What an output can realistically be sold for: the listing in a normal market,
+// the best buy order in a thin one (listings there can be absurd asks).
+export function saleValue(quote) {
+  if (!quote) return null;
+  const value = quote.thin ? quote.buy_order : quote.price;
+  return Number.isFinite(value) ? value : null;
+}
+
 export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0 }) {
   // An input without a known cost is never treated as free.
   const missingInputs = inputs.filter((i) => !Number.isFinite(i.cost)).length;
@@ -53,7 +61,7 @@ export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0
       const float = outputFloat(inputs, out.minFloat, out.maxFloat);
       const wear = wearForFloat(float);
       const quote = out.prices?.[wear];
-      const gross = quote && Number.isFinite(quote.price) ? quote.price : null;
+      const gross = saleValue(quote);
       if (gross === null) complete = false;
       outcomes.push({
         name: out.name,
@@ -65,6 +73,7 @@ export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0
         net: gross === null ? null : netSale(gross, feeRate, fixedFee),
         listings: quote ? quote.listings ?? null : null,
         sold24h: quote ? quote.sold_24h ?? null : null,
+        thin: quote ? quote.thin === true : false,
       });
     }
   }
@@ -72,7 +81,7 @@ export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0
   // Listing counts may be unknown (median-price source); ignore nulls.
   const counts = outcomes.map((o) => o.listings).filter((n) => Number.isFinite(n));
   const minListings = counts.length ? Math.min(...counts) : null;
-  const illiquid = outcomes.some((o) => o.sold24h === false);
+  const illiquid = outcomes.some((o) => o.sold24h === false || o.thin);
   const base = { complete, cost, outcomes, minListings, illiquid, missingInputs };
   if (!complete) return { ...base, ev: null, profit: null, roi: null, pProfit: null, risk: null };
 

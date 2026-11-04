@@ -1,5 +1,5 @@
 import { WEARS, analyze, marketName, wearForFloat } from "./engine.js";
-import { loadData, priceLookup } from "./data.js";
+import { loadData, priceLookup, priceSource } from "./data.js";
 
 const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert"];
 const WEAR_NAME = Object.fromEntries(WEARS.map((w) => [w.code, w.name]));
@@ -19,7 +19,7 @@ function escapeHtml(value) {
 function fees() {
   const rate = Number($("#steamFee").value) / 100;
   const fixed = Number($("#fixedFee").value);
-  return { feeRate: Number.isFinite(rate) && rate >= 0 && rate < 1 ? rate : 0.15, fixedFee: Number.isFinite(fixed) && fixed >= 0 ? fixed : 0 };
+  return { feeRate: Number.isFinite(rate) && rate >= 0 && rate < 1 ? rate : 0.02, fixedFee: Number.isFinite(fixed) && fixed >= 0 ? fixed : 0 };
 }
 
 const signed = (value) => `${value >= 0 ? "+" : ""}${currency.format(value)}`;
@@ -94,7 +94,7 @@ function renderFinderResults(results) {
         <td class="${a.profit >= 0 ? "positive" : "negative"}">${signed(a.profit)}</td>
         <td>${a.roi === null ? "—" : percent.format(a.roi)}</td>
         <td class="probability">${percent.format(a.pProfit)}</td>
-        <td>${r.lowLiquidity ? '<span class="badge" title="At least one output had no Steam sales in the last 24 h">low liquidity</span>' : ""}</td>
+        <td>${r.lowLiquidity ? '<span class="badge" title="At least one output has no CSFloat buy order near its listing price">low liquidity</span>' : ""}</td>
       </tr>`;
   }).join("");
 }
@@ -196,7 +196,7 @@ function outputsByCollection() {
       for (const w of WEARS) {
         const override = calc.overrides[`${name}|${w.code}`];
         const quote = data.lookup(marketName(skin.market_base_name, w.code, calc.stattrak));
-        if (override !== undefined) prices[w.code] = { ...(quote || {}), price: override };
+        if (override !== undefined) prices[w.code] = { ...(quote || {}), price: override, thin: false };
         else if (quote) prices[w.code] = quote;
       }
       return { name, minFloat: skin.min_float, maxFloat: skin.max_float, prices };
@@ -235,7 +235,7 @@ function metric(label, value, sub, positive = false) {
 
 function renderAnalysis(analysis) {
   const missing = analysis.outcomes.filter((o) => o.gross === null).map((o) => `Missing price for ${o.name} (${WEAR_NAME[o.wear]}) — enter it manually`);
-  if (analysis.missingInputs) missing.unshift(`${analysis.missingInputs} input${analysis.missingInputs > 1 ? "s have" : " has"} no Steam price — enter the cost manually`);
+  if (analysis.missingInputs) missing.unshift(`${analysis.missingInputs} input${analysis.missingInputs > 1 ? "s have" : " has"} no listing price — enter the cost manually`);
   if (missing.length) {
     $("#errorBox").textContent = missing.join(". ");
     $("#errorBox").hidden = false;
@@ -248,14 +248,14 @@ function renderAnalysis(analysis) {
   const a = analysis;
   $("#metrics").innerHTML = [
     metric("Input cost", currency.format(a.cost), "10 items"),
-    metric("Expected value", currency.format(a.ev), "after Steam fees"),
+    metric("Expected value", currency.format(a.ev), "after sale fees"),
     metric("Expected profit", signed(a.profit), a.roi === null ? "" : `ROI ${percent.format(a.roi)}`, a.profit >= 0),
     metric("P(profit)", percent.format(a.pProfit), "chance an outcome beats the cost"),
     metric("Risk", currency.format(a.risk), "Net proceeds standard deviation"),
   ].join("");
   $("#outcomeTable").innerHTML = a.outcomes.map((o) => `
     <tr>
-      <td>${escapeHtml(o.name)}${o.sold24h === false ? ' <span class="badge">no 24h sales</span>' : ""}</td>
+      <td>${escapeHtml(o.name)}${o.thin || o.sold24h === false ? ' <span class="badge" title="No buy order near the listing price">thin market</span>' : ""}</td>
       <td class="probability">${percent.format(o.probability)}</td>
       <td>${o.float.toFixed(4)}</td>
       <td>${WEAR_NAME[o.wear]}</td>
@@ -335,6 +335,8 @@ async function boot() {
   }
   $("#priceStamp").textContent = `Prices as of ${data.updatedAt.toLocaleString()}`;
   $("#staleNote").hidden = !data.stale;
+  const { feeRate } = priceSource(data.prices);
+  if (Number.isFinite(feeRate)) $("#steamFee").value = String(+(feeRate * 100).toFixed(2));
   $("#findButton").disabled = false;
   renderCalculator();
 }

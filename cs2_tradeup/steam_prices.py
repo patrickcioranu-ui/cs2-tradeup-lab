@@ -1,10 +1,7 @@
-"""CS2 Steam Market prices.
+"""Steam Market helpers, price merging and ECB conversion.
 
-Primary source: the public prices.csgotrader.app Steam dump — Steam Market
-median sale prices (USD) for every item in one download.
-
-The direct Steam search crawl (``fetch_all``) is kept for a possible future
-hybrid that adds listing counts. Findings (2026-11-04): Steam's search endpoint
+Production prices are CSFloat listings (see csfloat_prices.py). The direct
+Steam search crawl (``fetch_all``) is kept for a possible future Steam source. Findings (2026-11-04): Steam's search endpoint
 ignores ``currency`` (always USD cents), caps pages at 10 results, and answers
 HTTP 429 for minutes after ~18 anonymous pages, so a full crawl every 6 h is not
 workable. Prices are converted to EUR with the ECB daily reference rate.
@@ -24,9 +21,7 @@ from typing import Callable
 USER_AGENT = "TradeUpLab-data-refresh/1.0"
 SEARCH_URL = "https://steamcommunity.com/market/search/render/"
 ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
-CSGOTRADER_URL = "https://prices.csgotrader.app/latest/steam.json"
 PRICE_VIA = "prices.csgotrader.app"
-MEDIAN_KEYS = ("last_24h", "last_7d", "last_30d", "last_90d")
 WEAPON_TYPES = (
     "tag_CSGO_Type_Rifle", "tag_CSGO_Type_Pistol", "tag_CSGO_Type_SMG", "tag_CSGO_Type_Shotgun",
     "tag_CSGO_Type_SniperRifle", "tag_CSGO_Type_Machinegun", "tag_CSGO_Type_Equipment",
@@ -52,23 +47,6 @@ def parse_search_page(payload: dict, fx: float, seen_at: str) -> dict[str, dict]
         r["hash_name"]: {"price": round(r["sell_price"] / 100 * fx, 2), "listings": r["sell_listings"], "seen_at": seen_at}
         for r in payload.get("results") or []
     }
-
-
-def parse_csgotrader(payload: dict, fx: float, seen_at: str) -> dict[str, dict]:
-    """Map market name -> {price (EUR), listings: None, sold_24h, seen_at}.
-
-    Uses the 24 h median sale price, falling back to 7/30/90-day medians; items
-    with no recent sales at all are dropped. ``fx`` is EUR per USD.
-    """
-    prices = {}
-    for name, entry in payload.items():
-        if not isinstance(entry, dict):
-            continue
-        usd = next((entry[k] for k in MEDIAN_KEYS if isinstance(entry.get(k), (int, float)) and entry[k] > 0), None)
-        if usd is None:
-            continue
-        prices[name] = {"price": round(usd * fx, 2), "listings": None, "sold_24h": bool(entry.get("last_24h")), "seen_at": seen_at}
-    return prices
 
 
 def fetch_all(get_json: Callable[[int], dict], sleep: Callable[[float], None], fx: float, seen_at: str) -> tuple[dict, bool]:
@@ -102,9 +80,19 @@ def fetch_ecb_usd_per_eur(get_text: Callable[[str], str]) -> float:
     return float(match.group(1))
 
 
-def merge_prices(previous: dict | None, fresh: dict, now: datetime, complete: bool, fx_rate: float | None = None) -> dict:
-    """Merge fresh prices over previous ones, dropping items unseen for 72 hours."""
-    old = ((previous or {}).get("sources") or {}).get("steam", {}).get("prices", {})
+def merge_prices(
+    previous: dict | None,
+    fresh: dict,
+    now: datetime,
+    complete: bool,
+    fx_rate: float | None = None,
+    *,
+    source: str = "steam",
+    fee_rate: float = STEAM_FEE_RATE,
+    via: str = PRICE_VIA,
+) -> dict:
+    """Merge fresh prices over previous ones for ``source``, dropping items unseen for 72 hours."""
+    old = ((previous or {}).get("sources") or {}).get(source, {}).get("prices", {})
     cutoff = now - EXPIRY
     kept = {
         name: entry for name, entry in old.items()
@@ -116,7 +104,7 @@ def merge_prices(previous: dict | None, fresh: dict, now: datetime, complete: bo
         "currency": "EUR",
         "fx_rate": fx_rate,
         "complete": complete,
-        "sources": {"steam": {"fee_rate": STEAM_FEE_RATE, "via": PRICE_VIA, "prices": dict(sorted(kept.items()))}},
+        "sources": {source: {"fee_rate": fee_rate, "via": via, "prices": dict(sorted(kept.items()))}},
     }
 
 

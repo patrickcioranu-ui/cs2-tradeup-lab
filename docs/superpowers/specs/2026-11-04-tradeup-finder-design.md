@@ -84,6 +84,14 @@ All network access to Steam happens in the Action, never in the browser
 
 ### 3.3 Prices — `site/data/prices.json`
 
+> **Amended 2026-11-05 (user decision):** prices are now the **lowest CSFloat
+> listing** (`prices.csgotrader.app/latest/csfloat.json`, `starting_at`), with the
+> best buy order (`highest_order`) kept as `buy_order`. Source key `csfloat`, fee
+> 2%. `thin` = no buy order or buy order < 70% of listing; the low-liquidity badge
+> uses it. Refresh is daily (06:00 UTC). Steam median sale prices were dropped:
+> they were badly off for many skins (e.g. P90 | Glacier Mesh BS $0.08 vs ~$11
+> listings on CSFloat and Buff163).
+
 > **Amended 2026-11-04 during implementation (user decision):** Steam's search
 > endpoint ignores `currency` (always USD), serves only 10 results per page and
 > answers HTTP 429 for minutes after ~18 anonymous pages, so a full crawl every

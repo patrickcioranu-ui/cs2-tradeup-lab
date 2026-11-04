@@ -8,7 +8,6 @@ from cs2_tradeup.steam_prices import (
     fetch_all,
     fetch_ecb_usd_per_eur,
     merge_prices,
-    parse_csgotrader,
     parse_search_page,
 )
 
@@ -45,17 +44,6 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(prices["AK-47 | Aphrodite (Field-Tested)"], {"price": 8.72, "listings": 791, "seen_at": SEEN})
         self.assertEqual(parse_search_page(payload, 1.0, SEEN)["AK-47 | Aphrodite (Factory New)"]["price"], 273.82)
         self.assertEqual(len(prices), 3)
-
-    def test_csgotrader_uses_24h_median_and_falls_back(self):
-        payload = {
-            "AK-47 | Redline (Field-Tested)": {"last_24h": 43.56, "last_7d": 42.8, "last_30d": 43.51, "last_90d": 43.91},
-            "Rare Thing (Factory New)": {"last_24h": None, "last_7d": None, "last_30d": 10.0, "last_90d": 9.0},
-            "Dead Item (Battle-Scarred)": {"last_24h": None, "last_7d": None, "last_30d": None, "last_90d": None},
-        }
-        prices = parse_csgotrader(payload, 0.5, SEEN)
-        self.assertEqual(prices["AK-47 | Redline (Field-Tested)"], {"price": 21.78, "listings": None, "sold_24h": True, "seen_at": SEEN})
-        self.assertEqual(prices["Rare Thing (Factory New)"], {"price": 5.0, "listings": None, "sold_24h": False, "seen_at": SEEN})
-        self.assertNotIn("Dead Item (Battle-Scarred)", prices)
 
     def test_gzip_body_is_decompressed(self):
         import gzip

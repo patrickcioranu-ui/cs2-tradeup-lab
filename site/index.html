@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#10151d" />
-    <meta name="description" content="Find profitable CS2 trade-ups from real Steam Market prices." />
+    <meta name="description" content="Find profitable CS2 trade-ups from real CSFloat listing prices." />
     <title>TradeUp Lab — CS2 Trade-Up Finder</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -27,7 +27,7 @@
           <div class="eyebrow"><span class="eyebrow-line"></span> QUANTITATIVE MARKET ANALYSIS</div>
           <h1>Find the trade-up edge<br /><em>before you trade.</em></h1>
           <p class="hero-copy">
-            Searches every one- and two-collection trade-up against real Steam Market prices, then ranks them by
+            Searches every one- and two-collection trade-up against real CSFloat listing prices, then ranks them by
             expected profit, ROI or chance of profit. No promises. Just the numbers behind the decision.
           </p>
           <div class="hero-tags">
@@ -75,7 +75,7 @@
                 <option value="chance">Profit chance</option>
               </select>
             </label>
-            <label>Steam fee <span class="input-with-suffix"><input id="steamFee" type="number" min="0" max="99" step="0.1" value="15" /><span>%</span></span></label>
+            <label>Sale fee <span class="input-with-suffix"><input id="steamFee" type="number" min="0" max="99" step="0.1" value="2" /><span>%</span></span></label>
             <label>Fixed fee <span class="input-with-suffix"><input id="fixedFee" type="number" min="0" step="0.01" value="0" /><span>€</span></span></label>
             <div class="controls-action">
               <button id="findButton" class="primary-button" type="button" disabled><span>Find trade-ups</span><span class="button-arrow">↗</span></button>
@@ -130,7 +130,7 @@
                 <h2>Possible outputs</h2>
               </div>
             </div>
-            <p class="panel-description">Prices are Steam Market sale prices at each output's resulting wear. Edit any price to override it.</p>
+            <p class="panel-description">Each output is valued at its lowest CSFloat listing, or at its best buy order when the market is thin. Edit any value to override it.</p>
             <div id="outputGroups"></div>
           </div>
         </section>
@@ -157,7 +157,7 @@
               <div class="table-wrap">
                 <table>
                   <thead>
-                    <tr><th>Output</th><th>Chance</th><th>Float</th><th>Wear</th><th>Steam price</th><th>Net after fees</th></tr>
+                    <tr><th>Output</th><th>Chance</th><th>Float</th><th>Wear</th><th>Sale value</th><th>Net after fees</th></tr>
                   </thead>
                   <tbody id="outcomeTable"></tbody>
                 </table>
@@ -174,9 +174,10 @@
             <h2>Transparent by design.</h2>
             <p>
               Collection selection is weighted by the number of inputs from each collection; outputs inside a collection are
-              equally likely. Output floats use CS2's weighted-float rule. Prices are Steam Market median sale prices
-              (last 24 h, via prices.csgotrader.app) converted to euros at the ECB daily rate, refreshed every 6 hours.
-              Medians are not guarantees: spreads, volatility, trade locks and fees can change the result.
+              equally likely. Output floats use CS2's weighted-float rule. Prices are the lowest current CSFloat
+              listings (via prices.csgotrader.app), converted to euros at the ECB daily rate and refreshed daily. A listing
+              is not a guaranteed sale price: "thin market" means there is no buy order near the listing, so selling at
+              that price may take a long time. Spreads, volatility, trade locks and fees can change the result.
             </p>
           </div>
           <div class="method-equation">
@@ -188,7 +189,7 @@
 
       <footer class="footer">
         <span>TradeUp Lab / research prototype</span>
-        <span>Not affiliated with Valve or Steam</span>
+        <span>Not affiliated with Valve, Steam or CSFloat</span>
       </footer>
     </div>
     <script type="module" src="app.js"></script>

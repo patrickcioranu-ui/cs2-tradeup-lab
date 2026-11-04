@@ -30,7 +30,17 @@ export async function loadData(fetchFn = fetch, base = "data/") {
   return { catalog, prices, updatedAt, stale: !(Date.now() - updatedAt.getTime() < STALE_AFTER_MS) };
 }
 
-export function priceLookup(prices, source = "steam") {
+// The file names its price source (e.g. "csfloat"); default to the first one.
+function defaultSource(prices) {
+  return Object.keys(prices?.sources || {})[0];
+}
+
+export function priceLookup(prices, source = defaultSource(prices)) {
   const table = prices?.sources?.[source]?.prices || {};
   return (marketName) => table[marketName];
+}
+
+export function priceSource(prices) {
+  const name = defaultSource(prices);
+  return { name, feeRate: prices?.sources?.[name]?.fee_rate ?? null };
 }

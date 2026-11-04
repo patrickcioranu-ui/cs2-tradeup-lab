@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadData, priceLookup, DataLoadError } from "../../site/data.js";
+import { loadData, priceLookup, priceSource, DataLoadError } from "../../site/data.js";
 
 const catalog = { generated_at: "x", collections: {} };
 const pricesAt = (updatedAt) => ({
@@ -35,4 +35,10 @@ test("priceLookup finds exact names and misses unknown ones", () => {
   const lookup = priceLookup(pricesAt(hoursAgo(1)));
   assert.equal(lookup("StatTrak™ AK-47 | Redline (Field-Tested)").price, 9.5);
   assert.equal(lookup("AK-47 | Redline (Field-Tested)"), undefined);
+});
+
+test("priceLookup and priceSource use the file's own source when none is named", () => {
+  const prices = { updated_at: "x", sources: { csfloat: { fee_rate: 0.02, prices: { "AK-47 | Redline (Field-Tested)": { price: 21.15, thin: false } } } } };
+  assert.equal(priceLookup(prices)("AK-47 | Redline (Field-Tested)").price, 21.15);
+  assert.deepEqual(priceSource(prices), { name: "csfloat", feeRate: 0.02 });
 });

@@ -118,6 +118,25 @@ test("analyze treats an input without a cost as incomplete, never as free", () =
   assert.equal(result.cost, null);
 });
 
+test("thin-market outputs are valued at their buy order, never a troll listing", () => {
+  const out = (quote) => ({ A: [{ name: "x", minFloat: 0, maxFloat: 1, prices: Object.fromEntries(WEARS.map((w) => [w.code, quote])) }] });
+  const troll = analyze({ inputs: tenOf("A", 1), outputsByCollection: out({ price: 88754.77, buy_order: 12.43, thin: true }), feeRate: 0 });
+  close(troll.outcomes[0].gross, 12.43);
+  close(troll.ev, 12.43);
+  const noOrder = analyze({ inputs: tenOf("A", 1), outputsByCollection: out({ price: 500, buy_order: null, thin: true }), feeRate: 0 });
+  assert.equal(noOrder.complete, false);
+  const deep = analyze({ inputs: tenOf("A", 1), outputsByCollection: out({ price: 20, buy_order: 19.5, thin: false }), feeRate: 0 });
+  close(deep.outcomes[0].gross, 20);
+});
+
+test("analyze flags thin-market outputs as illiquid", () => {
+  const prices = (thin) => Object.fromEntries(WEARS.map((w) => [w.code, { price: 5, listings: null, thin }]));
+  const thin = analyze({ inputs: tenOf("A", 1), outputsByCollection: { A: [{ name: "x", minFloat: 0, maxFloat: 1, prices: prices(true) }] }, feeRate: 0 });
+  const deep = analyze({ inputs: tenOf("A", 1), outputsByCollection: { A: [{ name: "x", minFloat: 0, maxFloat: 1, prices: prices(false) }] }, feeRate: 0 });
+  assert.equal(thin.illiquid, true);
+  assert.equal(deep.illiquid, false);
+});
+
 test("analyze reports incomplete when an outcome's wear has no price", () => {
   const result = analyze({
     inputs: tenOf("A", 1, 0.01),
