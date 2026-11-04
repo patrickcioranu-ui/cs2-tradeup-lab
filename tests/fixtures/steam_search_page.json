@@ -1,0 +1,29 @@
+{
+ "success": true,
+ "start": 0,
+ "pagesize": 10,
+ "total_count": 12863,
+ "results": [
+  {
+   "name": "AK-47 | Aphrodite (Battle-Scarred)",
+   "hash_name": "AK-47 | Aphrodite (Battle-Scarred)",
+   "sell_listings": 617,
+   "sell_price": 1271,
+   "sell_price_text": "$12.71"
+  },
+  {
+   "name": "AK-47 | Aphrodite (Factory New)",
+   "hash_name": "AK-47 | Aphrodite (Factory New)",
+   "sell_listings": 45,
+   "sell_price": 27382,
+   "sell_price_text": "$273.82"
+  },
+  {
+   "name": "AK-47 | Aphrodite (Field-Tested)",
+   "hash_name": "AK-47 | Aphrodite (Field-Tested)",
+   "sell_listings": 791,
+   "sell_price": 1744,
+   "sell_price_text": "$17.44"
+  }
+ ]
+}
