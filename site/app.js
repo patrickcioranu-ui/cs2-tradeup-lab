@@ -30,13 +30,23 @@ function finderOptions() {
   const minChance = Number($("#minChance").value);
   const budgetRaw = $("#maxBudget").value.trim();
   const tier = $("#tierSelect").value;
+  const optionalNumber = (id) => {
+    const raw = $(id).value.trim();
+    const value = Number(raw);
+    return raw === "" || !Number.isFinite(value) ? null : value;
+  };
+  const minRoi = optionalNumber("#minRoi");
   return {
+    minProfit: optionalNumber("#minProfit"),
+    minRoi: minRoi === null ? null : minRoi / 100,
+    hideLowLiquidity: $("#hideLowLiquidity").checked,
+    collectionQuery: $("#collectionQuery").value,
     minProfitChance: Number.isFinite(minChance) ? Math.min(Math.max(minChance, 0), 100) / 100 : 0.5,
     maxBudget: budgetRaw === "" ? null : Number(budgetRaw),
     tiers: tier === "all" ? [0, 1, 2, 3, 4] : [Number(tier)],
     stattrak: $("#stattrakSelect").value,
     sortBy: $("#sortSelect").value,
-    limit: 50,
+    limit: Number($("#limitSelect").value) || 50,
     ...fees(),
   };
 }
@@ -44,6 +54,7 @@ function finderOptions() {
 function runFinder() {
   if (!data) return;
   if (worker) worker.terminate();
+  $("#topPill").textContent = `Top ${Number($("#limitSelect").value) || 50}`;
   worker = new Worker(new URL("finder.worker.js", import.meta.url), { type: "module" });
   $("#progress").hidden = false;
   $("#progressBar").style.width = "0%";
@@ -78,7 +89,7 @@ function legsLabel(result) {
 function renderFinderResults(results) {
   lastResults = results;
   if (!results.length) {
-    showFinderMessage("No trade-ups match — try lowering the profit chance or raising the budget");
+    showFinderMessage("No trade-ups match — try lowering the profit chance, minimum profit or ROI, or raising the budget");
     return;
   }
   $("#finderTableWrap").hidden = false;
@@ -315,6 +326,7 @@ function onOverrideChange(event) {
 
 async function boot() {
   $("#findButton").addEventListener("click", runFinder);
+  $("#collectionQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") runFinder(); });
   $("#finderResults").addEventListener("click", onResultActivate);
   $("#finderResults").addEventListener("keydown", onResultActivate);
   $("#inputRows").addEventListener("change", onInputChange);

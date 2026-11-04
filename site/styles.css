@@ -97,6 +97,8 @@ select { appearance: none; background-image: linear-gradient(45deg, transparent 
 .metric-value { color: var(--ink); font-size: 27px; font-weight: 680; letter-spacing: -.06em; margin-top: 24px; }
 .metric-value.positive { color: var(--accent); }
 .metric-sub { color: var(--faint); font-size: 10px; margin-top: 7px; }
+/* Grid items default to min-width:auto; let wide tables scroll inside .table-wrap instead of widening the page. */
+.results-grid > *, .workspace-grid > *, .side-stack > * { min-width: 0; }
 .results-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, .7fr); gap: 18px; margin-top: 18px; }
 .table-wrap { overflow-x: auto; margin-top: 22px; }
 table { border-collapse: collapse; width: 100%; min-width: 650px; }
@@ -128,6 +130,8 @@ td:first-child { color: var(--ink); font-weight: 650; }
 .controls-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px 12px; margin-top: 22px; align-items: end; }
 .controls-grid label, .calc-options label { color: var(--muted); font-size: 11px; display: grid; gap: 7px; }
 .controls-action { display: flex; justify-content: flex-end; }
+.controls-grid .checkbox { display: flex; align-items: center; gap: 7px; height: 32px; }
+.text-field { height: 32px; padding: 0 9px; font-size: 12px; border: 1px solid var(--line); }
 .primary-button:disabled { opacity: .5; cursor: progress; transform: none; }
 .progress { height: 6px; border-radius: 999px; background: rgba(8, 12, 17, .5); margin-top: 20px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: var(--accent); transition: width .15s; }

@@ -95,3 +95,27 @@ test("limit caps results and progress ends at 1", () => {
   assert.equal(results.length, 3);
   assert.equal(progress.at(-1), 1);
 });
+
+test("minProfit keeps only trade-ups with at least that expected profit", () => {
+  const keys = run({ minProfit: 21 }).map(legKey);
+  assert.deepEqual(keys, ["10xA-cheap:MW"]);
+});
+
+test("minRoi keeps only trade-ups with at least that return", () => {
+  const results = run({ minRoi: 2 });
+  assert.deepEqual(results.map(legKey), ["10xA-cheap:MW"]);
+  assert.ok(results.every((r) => r.analysis.roi >= 2));
+});
+
+test("hideLowLiquidity drops thin-market trade-ups", () => {
+  assert.equal(run({ stattrak: "stattrak" }).length, 1);
+  assert.equal(run({ stattrak: "stattrak", hideLowLiquidity: true }).length, 0);
+});
+
+test("collectionQuery keeps trade-ups using a matching collection, case-insensitive", () => {
+  const beta = run({ collectionQuery: "BET" });
+  assert.ok(beta.length > 0);
+  assert.ok(beta.every((r) => r.legs.some((l) => l.option.collection === "Beta")));
+  assert.ok(!beta.map(legKey).includes("10xA-cheap:MW"));
+  assert.equal(run({ collectionQuery: "  " }).length, run({}).length);
+});

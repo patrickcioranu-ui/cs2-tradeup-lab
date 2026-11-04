@@ -70,7 +70,11 @@ function legsToInputs(legs) {
 }
 
 export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
-  const { minProfitChance = 0, maxBudget = null, tiers = [0, 1, 2, 3, 4], stattrak = "normal", sortBy = "profit", limit = 50, feeRate = 0.15, fixedFee = 0 } = opts;
+  const {
+    minProfitChance = 0, maxBudget = null, minProfit = null, minRoi = null, hideLowLiquidity = false, collectionQuery = "",
+    tiers = [0, 1, 2, 3, 4], stattrak = "normal", sortBy = "profit", limit = 50, feeRate = 0.15, fixedFee = 0,
+  } = opts;
+  const query = String(collectionQuery || "").trim().toLowerCase();
   const modes = stattrak === "both" ? [false, true] : [stattrak === "stattrak"];
   const compare = comparator(sortBy);
 
@@ -99,11 +103,15 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
     done++;
     const cost = legs.reduce((s, l) => s + l.option.price * l.count, 0);
     if (maxBudget !== null && cost > maxBudget + 1e-9) return;
+    if (query && !legs.some((l) => l.option.collection.toLowerCase().includes(query))) return;
     const outputsByCollection = {};
     for (const l of legs) outputsByCollection[l.option.collection] = pools[l.option.collection];
     const analysis = analyze({ inputs: legsToInputs(legs), outputsByCollection, feeRate, fixedFee });
     if (!analysis.complete || analysis.pProfit < minProfitChance - 1e-12) return;
+    if (minProfit !== null && analysis.profit < minProfit - 1e-9) return;
+    if (minRoi !== null && (analysis.roi === null || analysis.roi < minRoi - 1e-12)) return;
     const lowLiquidity = analysis.illiquid || (analysis.minListings !== null && analysis.minListings < LOW_LIQUIDITY);
+    if (hideLowLiquidity && lowLiquidity) return;
     kept.push({ tier, stattrak: st, legs, analysis, lowLiquidity });
     if (kept.length > limit * 20) kept = kept.sort(compare).slice(0, limit);
   };
