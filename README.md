@@ -33,12 +33,13 @@ ROI or chance of profit.
 ## Data refresh
 
 `site/data/catalog.json` (skins, from the open-source [ByMykel CSGO-API](https://github.com/ByMykel/CSGO-API)) and
-`site/data/prices.json` are rebuilt every 6 hours by the **Refresh price data** GitHub Action, which commits them and
-triggers a Pages redeploy.
+`site/data/prices.json` are **not committed**. The **Deploy TradeUp Lab to GitHub Pages** workflow builds them fresh
+and publishes them with the site on every push to `main`, every 6 hours, and on demand. If a data build fails, that
+deploy is skipped and the previous live site keeps its last good data.
 
-To refresh now: **Actions → Refresh price data → Run workflow**.
+To refresh now: **Actions → Deploy TradeUp Lab to GitHub Pages → Run workflow**.
 
-To refresh locally:
+For local development, build the data first (takes a few seconds):
 
 ```bash
 python scripts/update_data.py
@@ -70,5 +71,5 @@ python tradeup_cli.py data/example_tradeup.json
 
 ## Deployment
 
-GitHub Pages must use **Settings → Pages → Source: GitHub Actions**. The `Deploy TradeUp Lab to GitHub Pages`
-workflow publishes the `site/` folder on every push to `main` and after every price refresh.
+GitHub Pages must use **Settings → Pages → Source: GitHub Actions**. Scheduled workflows are paused by GitHub after
+60 days without repository activity; re-enable it from the Actions tab if that happens.

@@ -62,12 +62,15 @@ All network access to Steam happens in the Action, never in the browser
 
 ## 3. Data pipeline
 
-### 3.1 Workflow — `.github/workflows/update-prices.yml`
-- Triggers: `schedule` cron `0 */6 * * *`, and `workflow_dispatch`.
-- Runs `python scripts/update_data.py`, then commits `site/data/*.json` only if
-  they changed, with message `data: refresh prices <UTC timestamp>`.
-- Needs `permissions: contents: write`.
-- The committed data triggers the existing Pages deploy.
+### 3.1 Workflow — `.github/workflows/pages.yml`
+
+> **Amended 2026-11-04 after final review:** committing ~4 MB of data every 6 h
+> would bloat the repo, so data is no longer committed.
+
+- Triggers: push to `main`, `schedule` cron `0 */6 * * *`, and `workflow_dispatch`.
+- Runs `python scripts/update_data.py` to build `site/data/*.json` (git-ignored),
+  then uploads `site/` as the Pages artifact and deploys it.
+- If the data build fails, the deploy is skipped and the last live site stays up.
 
 ### 3.2 Skin catalog — `site/data/catalog.json`
 - Source: ByMykel CSGO-API public JSON (`skins.json`, English).
