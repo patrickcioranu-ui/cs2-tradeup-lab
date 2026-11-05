@@ -153,3 +153,10 @@ test("floatMode picks worst, middle or best float inside the bought wear", () =>
   close(float("middle"), (0.07 + 0.1499) / 2);
   close(float(undefined), 0.1499);
 });
+
+test("maxProfitChance keeps only trade-ups at or below that chance", () => {
+  const results = run({ maxProfitChance: 0.95 });
+  assert.ok(results.length > 0);
+  assert.ok(results.every((r) => r.analysis.pProfit <= 0.95 + 1e-12));
+  assert.ok(!results.map(legKey).includes("10xA-cheap:MW"));
+});

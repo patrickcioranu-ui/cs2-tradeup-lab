@@ -37,7 +37,9 @@ function finderOptions() {
     return raw === "" || !Number.isFinite(value) ? null : value;
   };
   const minRoi = optionalNumber("#minRoi");
+  const maxChance = optionalNumber("#maxChance");
   return {
+    maxProfitChance: maxChance === null ? null : Math.min(Math.max(maxChance, 0), 100) / 100,
     minProfit: optionalNumber("#minProfit"),
     minRoi: minRoi === null ? null : minRoi / 100,
     hideLowLiquidity: $("#hideLowLiquidity").checked,
@@ -94,6 +96,115 @@ function runFinder() {
   $("#finderMode").textContent = `Assumptions: inputs bought at the cheapest listing with the ${floatLabel}; thin-market outputs valued at the ${thinLabel}.`;
   $("#finderMode").hidden = false;
   worker.postMessage({ type: "search", catalog: data.catalog, prices: data.prices, opts });
+}
+
+// ---------- Knife Hunter ----------
+
+let huntWorker = null;
+let lastHunts = [];
+
+function oneIn(chance) {
+  const n = 1 / chance;
+  return n < 10 ? `${percent.format(chance)}` : `${percent.format(chance)} · 1 in ${Math.round(n).toLocaleString("en-GB")}`;
+}
+
+function huntOptions() {
+  const number = (id) => {
+    const raw = $(id).value.trim();
+    const value = Number(raw);
+    return raw === "" || !Number.isFinite(value) ? null : value;
+  };
+  return {
+    query: $("#huntQuery").value,
+    phase: $("#huntPhase").value || null,
+    minValue: number("#huntMinValue"),
+    wear: $("#huntWear").value || null,
+    stattrak: $("#huntStattrak").checked,
+    maxBudget: number("#huntBudget"),
+    limit: Number($("#huntLimit").value) || 50,
+    floatMode: $("#floatMode").value,
+    thinValuation: $("#thinValuation").value,
+    ...fees(),
+  };
+}
+
+function showHuntMessage(text) {
+  $("#huntMessage").textContent = text;
+  $("#huntMessage").hidden = false;
+  $("#huntTableWrap").hidden = true;
+}
+
+function runHunt() {
+  if (!data) return;
+  const opts = huntOptions();
+  if (!opts.query.trim() && !opts.phase && opts.minValue === null) {
+    showHuntMessage("Choose a target: type a knife or gloves name, pick a phase, or set a minimum value.");
+    return;
+  }
+  if (huntWorker) huntWorker.terminate();
+  $("#hunterPill").textContent = `Top ${opts.limit}`;
+  huntWorker = new Worker(new URL("finder.worker.js", import.meta.url), { type: "module" });
+  $("#huntProgress").hidden = false;
+  $("#huntProgressBar").style.width = "0%";
+  $("#huntMessage").hidden = true;
+  huntWorker.onmessage = ({ data: msg }) => {
+    if (msg.type === "progress") $("#huntProgressBar").style.width = `${Math.round(msg.value * 100)}%`;
+    if (msg.type === "done") {
+      $("#huntProgress").hidden = true;
+      renderHuntResults(msg.results);
+      huntWorker.terminate();
+      huntWorker = null;
+    }
+    if (msg.type === "error") {
+      $("#huntProgress").hidden = true;
+      showHuntMessage(`Hunt failed: ${msg.message}`);
+    }
+  };
+  huntWorker.postMessage({ type: "hunt", catalog: data.catalog, prices: data.prices, opts });
+}
+
+function renderHuntResults(results) {
+  lastHunts = results;
+  if (!results.length) {
+    showHuntMessage("No trade-up can reach that target — check the spelling, or loosen the phase, wear, value or budget.");
+    return;
+  }
+  $("#huntTableWrap").hidden = false;
+  $("#huntResults").innerHTML = results.map((r, i) => {
+    const a = r.analysis;
+    const lands = [...new Set(r.targets.map((t) => `${t.name}${t.phase ? ` (${t.phase})` : ""}${t.wear ? ` ${t.wear}` : ""}`))];
+    const landsText = lands.slice(0, 3).join(", ") + (lands.length > 3 ? ` +${lands.length - 3} more` : "");
+    return `
+      <tr class="clickable" data-hunt="${i}" tabindex="0">
+        <td>${i + 1}</td>
+        <td class="legs">${escapeHtml(legsLabel(r))}</td>
+        <td class="probability">${oneIn(r.hitChance)}</td>
+        <td>${currency.format(a.cost)}</td>
+        <td>${currency.format(r.costPerHit)}</td>
+        <td>${a.ev === null ? "—" : currency.format(a.ev)}</td>
+        <td class="${(a.profit ?? 0) >= 0 ? "positive" : "negative"}">${a.profit === null ? "—" : signed(a.profit)}</td>
+        <td>${a.pProfit === null ? "—" : percent.format(a.pProfit)}</td>
+        <td class="targets">${escapeHtml(landsText)}</td>
+        <td>${r.lowLiquidity ? '<span class="badge" title="At least one output has no CSFloat buy order near its listing price">low liquidity</span>' : ""}</td>
+      </tr>`;
+  }).join("");
+}
+
+function onHuntActivate(event) {
+  const row = event.target.closest("tr[data-hunt]");
+  if (!row) return;
+  if (event.type === "keydown" && event.key !== "Enter") return;
+  loadIntoCalculator(lastHunts[Number(row.dataset.hunt)]);
+}
+
+function showTab(name) {
+  for (const tab of document.querySelectorAll(".tab")) {
+    const active = tab.dataset.tab === name;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+  }
+  $("#finder").hidden = name !== "finder";
+  $("#hunter").hidden = name !== "hunter";
 }
 
 function showFinderMessage(text) {
@@ -346,6 +457,11 @@ function onOverrideChange(event) {
 
 async function boot() {
   $("#findButton").addEventListener("click", runFinder);
+  $("#huntButton").addEventListener("click", runHunt);
+  $("#huntQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") runHunt(); });
+  $("#huntResults").addEventListener("click", onHuntActivate);
+  $("#huntResults").addEventListener("keydown", onHuntActivate);
+  for (const tab of document.querySelectorAll(".tab")) tab.addEventListener("click", () => showTab(tab.dataset.tab));
   $("#collectionQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") runFinder(); });
   $("#finderResults").addEventListener("click", onResultActivate);
   $("#finderResults").addEventListener("keydown", onResultActivate);
@@ -370,6 +486,9 @@ async function boot() {
   const { feeRate } = priceSource(data.prices);
   if (Number.isFinite(feeRate)) $("#steamFee").value = String(+(feeRate * 100).toFixed(2));
   $("#findButton").disabled = false;
+  $("#huntButton").disabled = false;
+  const knifeNames = [...new Set(Object.values(data.catalog.special_pools || {}).flat().map((e) => e.market_base_name.replace(/^★ /, "")))].sort();
+  $("#huntNames").innerHTML = knifeNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("");
   renderCalculator();
 }
 

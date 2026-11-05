@@ -162,6 +162,20 @@
           "thin": false,
           "listings": 50,
           "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-covert (Minimal Wear)": {
+          "price": 3,
+          "buy_order": 2.9,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ H-wraps | Cobalt (Field-Tested)": {
+          "price": 30,
+          "buy_order": 29,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
         }
       }
     }

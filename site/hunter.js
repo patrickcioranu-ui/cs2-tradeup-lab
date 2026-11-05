@@ -1,0 +1,90 @@
+// Knife Hunter: rank 5-Covert trade-ups by the chance of hitting a chosen knife/gloves target.
+import { analyze, marketName, normalizeFloat, saleValue, wearForFloat } from "./engine.js";
+import { GEMS, GEM_PHASE_ODDS, KNIFE_TIER, inputOptions, outputPool, specialPool } from "./finder.js";
+
+const SIZE = 5;
+
+// Chance of a given phase within its finish (phase odds as in finder.phaseWeightedQuote).
+function phaseOdds(entry, finishEntries) {
+  if (!entry.phase) return 1;
+  if (GEMS.has(entry.phase)) return GEM_PHASE_ODDS;
+  const gems = finishEntries.filter((e) => GEMS.has(e.phase)).length;
+  const regular = finishEntries.filter((e) => e.phase && !GEMS.has(e.phase)).length;
+  return (1 - GEM_PHASE_ODDS * gems) / regular;
+}
+
+function displayName(entry, stattrak) {
+  return stattrak ? `★ StatTrak™ ${entry.market_base_name.slice(2)}` : entry.market_base_name;
+}
+
+export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
+  const {
+    query = "", phase = null, minValue = null, wear = null, stattrak = false, maxBudget = null, limit = 50,
+    feeRate = 0.02, fixedFee = 0, floatMode = "worst", thinValuation = "buy_order",
+  } = opts;
+  const q = String(query || "").trim().toLowerCase();
+  if (!q && !phase && minValue === null) return [];
+
+  // Per case: its finishes (phases grouped) and the entries that could be the target.
+  const cases = new Map();
+  for (const name of Object.keys(catalog.special_pools || {})) {
+    const pool = specialPool(catalog, name, stattrak);
+    const finishes = new Map();
+    for (const e of pool) (finishes.get(e.market_base_name) || finishes.set(e.market_base_name, []).get(e.market_base_name)).push(e);
+    const candidates = pool.filter((e) => (!q || e.market_base_name.toLowerCase().includes(q)) && (!phase || e.phase === phase) && !(wear && e.vanilla));
+    cases.set(name, { finishes, finishCount: finishes.size, candidates });
+  }
+
+  const options = inputOptions(catalog, lookup, KNIFE_TIER, stattrak, floatMode);
+  const groups = [...options.entries()];
+  const hasTarget = (name) => (cases.get(name)?.candidates.length || 0) > 0;
+  const pools = Object.fromEntries(groups.map(([name]) => [name, outputPool(catalog, lookup, name, KNIFE_TIER + 1, stattrak)]));
+
+  const results = [];
+  const consider = (legs) => {
+    if (!legs.some((l) => hasTarget(l.option.collection))) return;
+    const cost = legs.reduce((s, l) => s + l.option.price * l.count, 0);
+    if (maxBudget !== null && cost > maxBudget + 1e-9) return;
+    const w = legs.reduce((s, l) => s + l.count * normalizeFloat(l.option.float, l.option.skin.min_float, l.option.skin.max_float), 0) / SIZE;
+
+    let hitChance = 0;
+    const targets = [];
+    for (const l of legs) {
+      const info = cases.get(l.option.collection);
+      if (!info) continue;
+      for (const e of info.candidates) {
+        const float = e.min_float + w * (e.max_float - e.min_float);
+        const landed = e.vanilla ? null : wearForFloat(float);
+        if (wear && landed !== wear) continue;
+        const quote = lookup(marketName(e.market_base_name, landed || "FN", stattrak, { phase: e.phase, vanilla: e.vanilla }));
+        const value = saleValue(quote, thinValuation);
+        if (minValue !== null && !(value >= minValue)) continue;
+        const chance = (l.count / SIZE) * (1 / info.finishCount) * phaseOdds(e, info.finishes.get(e.market_base_name));
+        hitChance += chance;
+        targets.push({ name: displayName(e, stattrak), phase: e.phase, wear: landed, value, chance });
+      }
+    }
+    if (hitChance <= 0) return;
+
+    const inputs = legs.flatMap((l) => Array.from({ length: l.count }, () => ({
+      collection: l.option.collection, float: l.option.float, minFloat: l.option.skin.min_float, maxFloat: l.option.skin.max_float, cost: l.option.price,
+    })));
+    const outputsByCollection = Object.fromEntries(legs.map((l) => [l.option.collection, pools[l.option.collection]]));
+    const analysis = analyze({ inputs, outputsByCollection, feeRate, fixedFee, thinValuation });
+    results.push({ tier: KNIFE_TIER, stattrak, legs, analysis, hitChance, costPerHit: cost / hitChance, targets, lowLiquidity: analysis.illiquid });
+  };
+
+  for (let i = 0; i < groups.length; i++) {
+    for (const a of groups[i][1]) consider([{ option: a, count: SIZE }]);
+    for (let j = i + 1; j < groups.length; j++) {
+      for (const a of groups[i][1]) for (const b of groups[j][1]) {
+        for (let k = 1; k < SIZE; k++) consider([{ option: a, count: k }, { option: b, count: SIZE - k }]);
+      }
+    }
+    onProgress((i + 1) / groups.length);
+  }
+  onProgress(1);
+  return results
+    .sort((x, y) => y.hitChance - x.hitChance || x.costPerHit - y.costPerHit)
+    .slice(0, limit);
+}

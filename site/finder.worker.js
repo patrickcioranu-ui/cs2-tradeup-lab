@@ -1,12 +1,14 @@
-// Runs the trade-up search off the main thread.
+// Runs the trade-up search (Finder) or knife hunt (Knife Hunter) off the main thread.
 import { findTradeUps } from "./finder.js";
+import { findHunts } from "./hunter.js";
 import { priceLookup } from "./data.js";
 
 self.onmessage = ({ data }) => {
-  if (data.type !== "search") return;
+  const search = { search: findTradeUps, hunt: findHunts }[data.type];
+  if (!search) return;
   try {
     let last = 0;
-    const results = findTradeUps(data.catalog, priceLookup(data.prices), data.opts, (value) => {
+    const results = search(data.catalog, priceLookup(data.prices), data.opts, (value) => {
       if (value - last >= 0.01 || value === 1) {
         last = value;
         self.postMessage({ type: "progress", value });

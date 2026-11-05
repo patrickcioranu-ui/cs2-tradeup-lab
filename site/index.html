@@ -39,6 +39,11 @@
 
         <div id="dataError" class="error-box" role="alert" hidden>Couldn't load price data. The finder and calculator need it — try reloading in a minute.</div>
 
+        <nav class="tabs" role="tablist" aria-label="Tools">
+          <button class="tab active" type="button" role="tab" data-tab="finder" aria-selected="true">Finder</button>
+          <button class="tab" type="button" role="tab" data-tab="hunter" aria-selected="false">Knife Hunter</button>
+        </nav>
+
         <section class="panel finder-panel" id="finder" aria-label="Trade-up finder">
           <div class="panel-heading">
             <div>
@@ -50,6 +55,7 @@
           <p class="panel-description">Set your targets. Input costs assume the worst float in each wear you buy, so results are conservative.</p>
           <div class="controls-grid">
             <label>Min profit chance <span class="input-with-suffix"><input id="minChance" type="number" min="0" max="100" step="1" value="50" /><span>%</span></span></label>
+            <label>Max profit chance <span class="input-with-suffix"><input id="maxChance" type="number" min="0" max="100" step="1" placeholder="none" /><span>%</span></span></label>
             <label>Max budget <span class="input-with-suffix"><input id="maxBudget" type="number" min="0" step="0.5" placeholder="none" /><span>€</span></span></label>
             <label>Rarity tier
               <select id="tierSelect">
@@ -119,6 +125,55 @@
             </table>
           </div>
           <p class="panel-description">Click a row to open it in the calculator below.</p>
+        </section>
+
+        <section class="panel finder-panel" id="hunter" aria-label="Knife hunter" hidden>
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">01 / KNIFE HUNTER</span>
+              <h2>Hunt a rare knife</h2>
+            </div>
+            <span class="count-pill" id="hunterPill">Top 50</span>
+          </div>
+          <p class="panel-description">Pick a target and see which 5-Covert trade-ups give you the best chance of getting it. Uses the Input float, thin-output and fee settings from the Finder tab.</p>
+          <div class="controls-grid">
+            <label>Knife or gloves <input id="huntQuery" class="field text-field" type="search" list="huntNames" placeholder="e.g. Karambit, Doppler, Vice" /></label>
+            <datalist id="huntNames"></datalist>
+            <label>Phase
+              <select id="huntPhase">
+                <option value="">Any</option>
+                <option>Ruby</option><option>Sapphire</option><option>Black Pearl</option><option>Emerald</option>
+                <option>Phase 1</option><option>Phase 2</option><option>Phase 3</option><option>Phase 4</option>
+              </select>
+            </label>
+            <label>Min value <span class="input-with-suffix"><input id="huntMinValue" type="number" min="0" step="50" placeholder="none" /><span>€</span></span></label>
+            <label>Wear
+              <select id="huntWear">
+                <option value="">Any</option>
+                <option value="FN">Factory New</option><option value="MW">Minimal Wear</option><option value="FT">Field-Tested</option>
+                <option value="WW">Well-Worn</option><option value="BS">Battle-Scarred</option>
+              </select>
+            </label>
+            <label>Max budget <span class="input-with-suffix"><input id="huntBudget" type="number" min="0" step="10" placeholder="none" /><span>€</span></span></label>
+            <label>Show
+              <select id="huntLimit"><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select>
+            </label>
+            <label class="checkbox"><input id="huntStattrak" type="checkbox" /> StatTrak™ (knives only)</label>
+            <div class="controls-action">
+              <button id="huntButton" class="primary-button" type="button" disabled><span>Hunt</span><span class="button-arrow">↗</span></button>
+            </div>
+          </div>
+          <div class="progress" id="huntProgress" hidden><div class="progress-bar" id="huntProgressBar"></div></div>
+          <div id="huntMessage" class="finder-message" hidden></div>
+          <div class="table-wrap" id="huntTableWrap" hidden>
+            <table>
+              <thead>
+                <tr><th>#</th><th>Inputs</th><th>Chance of target</th><th>Cost</th><th>Cost per hit</th><th>EV</th><th>Profit</th><th>Profit chance</th><th>Target lands as</th><th></th></tr>
+              </thead>
+              <tbody id="huntResults"></tbody>
+            </table>
+          </div>
+          <p class="panel-description">Chance of target counts only the knives/gloves you chose; EV and profit include every possible outcome. Click a row to open it in the calculator.</p>
         </section>
 
         <section class="workspace-grid calculator" id="calculator" aria-label="Trade-up calculator">

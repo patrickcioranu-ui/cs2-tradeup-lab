@@ -85,6 +85,16 @@
           "max_float": 1,
           "stattrak_available": false
         }
+      ],
+      "5": [
+        {
+          "id": "b5",
+          "market_base_name": "B-covert",
+          "rarity": 5,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        }
       ]
     },
     "Gamma": {
@@ -135,6 +145,18 @@
       {
         "id": "g",
         "market_base_name": "★ G-gloves | Vice",
+        "phase": null,
+        "kind": "glove",
+        "vanilla": false,
+        "min_float": 0.06,
+        "max_float": 0.8,
+        "stattrak_available": false
+      }
+    ],
+    "Beta": [
+      {
+        "id": "hw",
+        "market_base_name": "★ H-wraps | Cobalt",
         "phase": null,
         "kind": "glove",
         "vanilla": false,

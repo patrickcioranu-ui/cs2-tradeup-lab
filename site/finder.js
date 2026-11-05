@@ -21,7 +21,7 @@ function inputFloat(skin, wear, floatMode = "worst") {
 }
 
 // Knife/glove pool of a case collection; StatTrak contracts can only return knives.
-function specialPool(catalog, collectionName, stattrak) {
+export function specialPool(catalog, collectionName, stattrak) {
   return ((catalog.special_pools || {})[collectionName] || []).filter((s) => !stattrak || (s.kind === "knife" && s.stattrak_available));
 }
 
@@ -68,7 +68,7 @@ function specialName(entry, stattrak) {
 // Valve publishes no Doppler phase odds. Community estimates put each gem at ~0.4-2%;
 // we use the cautious 0.5% per gem and split the rest evenly over the regular phases.
 export const GEM_PHASE_ODDS = 0.005;
-const GEMS = new Set(["Ruby", "Sapphire", "Black Pearl", "Emerald"]);
+export const GEMS = new Set(["Ruby", "Sapphire", "Black Pearl", "Emerald"]);
 
 // One quote for a whole Doppler-style finish at one wear: phase prices weighted by phase odds.
 function phaseWeightedQuote(entries, quoteFor) {
@@ -136,7 +136,7 @@ function legsToInputs(legs) {
 
 export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   const {
-    minProfitChance = 0, maxBudget = null, minProfit = null, minRoi = null, hideLowLiquidity = false, collectionQuery = "",
+    minProfitChance = 0, maxProfitChance = null, maxBudget = null, minProfit = null, minRoi = null, hideLowLiquidity = false, collectionQuery = "",
     tiers = [0, 1, 2, 3, 4], stattrak = "normal", sortBy = "profit", limit = 50, feeRate = 0.15, fixedFee = 0,
     floatMode = "worst", thinValuation = "buy_order",
   } = opts;
@@ -174,6 +174,7 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
     for (const l of legs) outputsByCollection[l.option.collection] = pools[l.option.collection];
     const analysis = analyze({ inputs: legsToInputs(legs), outputsByCollection, feeRate, fixedFee, thinValuation });
     if (!analysis.complete || analysis.pProfit < minProfitChance - 1e-12) return;
+    if (maxProfitChance !== null && analysis.pProfit > maxProfitChance + 1e-12) return;
     if (minProfit !== null && analysis.profit < minProfit - 1e-9) return;
     if (minRoi !== null && (analysis.roi === null || analysis.roi < minRoi - 1e-12)) return;
     const lowLiquidity = analysis.illiquid || (analysis.minListings !== null && analysis.minListings < LOW_LIQUIDITY);
