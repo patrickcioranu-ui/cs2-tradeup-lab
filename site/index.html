@@ -80,12 +80,15 @@
                 <option value="profit">Expected profit (€)</option>
                 <option value="roi">ROI (%)</option>
                 <option value="chance">Profit chance</option>
+                <option value="jackpot">Biggest best case (€)</option>
               </select>
             </label>
             <label>Sale fee <span class="input-with-suffix"><input id="steamFee" type="number" min="0" max="99" step="0.1" value="2" /><span>%</span></span></label>
             <label>Fixed fee <span class="input-with-suffix"><input id="fixedFee" type="number" min="0" step="0.01" value="0" /><span>€</span></span></label>
             <label>Min expected profit <span class="input-with-suffix"><input id="minProfit" type="number" step="0.5" placeholder="none" /><span>€</span></span></label>
             <label>Min ROI <span class="input-with-suffix"><input id="minRoi" type="number" step="1" placeholder="none" /><span>%</span></span></label>
+            <label title="Profit if you get the most valuable outcome">Min best case <span class="input-with-suffix"><input id="minBestProfit" type="number" step="10" placeholder="none" /><span>€</span></span></label>
+            <label title="Most valuable outcome as a multiple of the input cost">Min jackpot <span class="input-with-suffix"><input id="minJackpot" type="number" min="0" step="0.5" placeholder="none" /><span>×</span></span></label>
             <label>Collection <input id="collectionQuery" class="field text-field" type="search" placeholder="any, e.g. Prisma" /></label>
             <label>Show
               <select id="limitSelect">
@@ -119,7 +122,7 @@
           <div class="table-wrap" id="finderTableWrap" hidden>
             <table>
               <thead>
-                <tr><th>#</th><th>Inputs</th><th>Tier</th><th>Cost</th><th>EV</th><th>Profit</th><th>ROI</th><th>Chance</th><th></th></tr>
+                <tr><th>#</th><th>Inputs</th><th>Tier</th><th>Cost</th><th>EV</th><th>Profit</th><th>ROI</th><th>Chance</th><th>Best case</th><th></th></tr>
               </thead>
               <tbody id="finderResults"></tbody>
             </table>

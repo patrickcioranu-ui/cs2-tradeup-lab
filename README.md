@@ -16,9 +16,11 @@ ROI or chance of profit.
 - **Knife Hunter tab:** pick a knife or gloves (name, optional Doppler phase, wear, minimum value, StatTrak) and see
   the 5-Covert trade-ups with the highest chance of hitting it, the cost per hit (input cost ÷ chance) and the full
   trade-up's EV and profit chance.
-- **Finder filters:** min/max profit chance, min profit, min ROI, max budget, collection, tier (including
+- **Finder filters:** min/max profit chance, min profit, min ROI, min best case (€) and min jackpot (×), max budget, collection, tier (including
   Covert → Knife/Gloves), StatTrak, liquidity, and 50–500 results. If nothing meets the profit filters, the best
   trade-ups are shown anyway with a note.
+- **Jackpot search:** a *Best case* column (profit if you hit the most valuable outcome, with its chance) and a
+  *Biggest best case* sort, for long shots with big payouts; pair it with *Max profit chance*.
 - **Low-liquidity warning:** shown when an output has no CSFloat buy order, or its best buy order is below 70% of the
   lowest listing (a thin market where selling near the listing price is unlikely).
 

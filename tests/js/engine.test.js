@@ -177,3 +177,23 @@ test("analyze works with 5-input (knife) contracts", () => {
   close(result.cost, 50);
   close(result.ev, 64);
 });
+
+test("analyze reports the best case: top outcome's profit, its chance and the jackpot multiple", () => {
+  const result = analyze({
+    inputs: tenOf("A", 1),
+    outputsByCollection: {
+      A: [
+        { name: "jackpot", minFloat: 0, maxFloat: 1, prices: allWears(60) },
+        { name: "dud", minFloat: 0, maxFloat: 1, prices: allWears(2) },
+        { name: "dud2", minFloat: 0, maxFloat: 1, prices: allWears(2) },
+        { name: "dud3", minFloat: 0, maxFloat: 1, prices: allWears(2) },
+      ],
+    },
+    feeRate: 0,
+  });
+  close(result.bestProfit, 50);
+  close(result.bestChance, 0.25);
+  close(result.jackpotMultiple, 6);
+  const incomplete = analyze({ inputs: tenOf("A", 1), outputsByCollection: { A: [{ name: "x", minFloat: 0, maxFloat: 1, prices: {} }] }, feeRate: 0 });
+  assert.equal(incomplete.bestProfit, null);
+});

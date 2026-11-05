@@ -42,6 +42,8 @@ function finderOptions() {
     maxProfitChance: maxChance === null ? null : Math.min(Math.max(maxChance, 0), 100) / 100,
     minProfit: optionalNumber("#minProfit"),
     minRoi: minRoi === null ? null : minRoi / 100,
+    minBestProfit: optionalNumber("#minBestProfit"),
+    minJackpot: optionalNumber("#minJackpot"),
     hideLowLiquidity: $("#hideLowLiquidity").checked,
     collectionQuery: $("#collectionQuery").value,
     minProfitChance: Number.isFinite(minChance) ? Math.min(Math.max(minChance, 0), 100) / 100 : 0.5,
@@ -69,17 +71,17 @@ function runFinder() {
     if (msg.type === "progress") $("#progressBar").style.width = `${Math.round(msg.value * 100)}%`;
     if (msg.type === "done") {
       // Nothing met the profit filters: search again without them and show the best anyway.
-      const strict = opts.minProfitChance > 0 || opts.minProfit !== null || opts.minRoi !== null || opts.hideLowLiquidity;
+      const strict = opts.minProfitChance > 0 || opts.minProfit !== null || opts.minRoi !== null || opts.minBestProfit !== null || opts.minJackpot !== null || opts.hideLowLiquidity;
       if (!msg.results.length && !relaxed && strict) {
         relaxed = true;
         $("#progressBar").style.width = "0%";
-        worker.postMessage({ type: "search", catalog: data.catalog, prices: data.prices, opts: { ...opts, minProfitChance: 0, minProfit: null, minRoi: null, hideLowLiquidity: false } });
+        worker.postMessage({ type: "search", catalog: data.catalog, prices: data.prices, opts: { ...opts, minProfitChance: 0, minProfit: null, minRoi: null, minBestProfit: null, minJackpot: null, hideLowLiquidity: false } });
         return;
       }
       $("#progress").hidden = true;
       renderFinderResults(msg.results);
       if (relaxed && msg.results.length) {
-        $("#finderMessage").textContent = "No trade-ups meet your profit chance, minimum profit, ROI or liquidity filters. Showing the best ones anyway; check the profit and chance columns.";
+        $("#finderMessage").textContent = "No trade-ups meet your profit chance, minimum profit, ROI, best-case or liquidity filters. Showing the best ones anyway; check the profit and chance columns.";
         $("#finderMessage").hidden = false;
       }
       worker.terminate();
@@ -237,6 +239,7 @@ function renderFinderResults(results) {
         <td class="${a.profit >= 0 ? "positive" : "negative"}">${signed(a.profit)}</td>
         <td>${a.roi === null ? "—" : percent.format(a.roi)}</td>
         <td class="probability">${percent.format(a.pProfit)}</td>
+        <td class="${a.bestProfit >= 0 ? "positive" : "negative"}" title="${a.jackpotMultiple === null ? "" : `${a.jackpotMultiple.toFixed(1)}× your inputs`}">${signed(a.bestProfit)} (${percent.format(a.bestChance)})</td>
         <td>${r.lowLiquidity ? '<span class="badge" title="At least one output has no CSFloat buy order near its listing price">low liquidity</span>' : ""}</td>
       </tr>`;
   }).join("");

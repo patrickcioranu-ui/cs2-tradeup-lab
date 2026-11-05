@@ -160,3 +160,19 @@ test("maxProfitChance keeps only trade-ups at or below that chance", () => {
   assert.ok(results.every((r) => r.analysis.pProfit <= 0.95 + 1e-12));
   assert.ok(!results.map(legKey).includes("10xA-cheap:MW"));
 });
+
+test("sortBy 'jackpot' ranks by best-case profit", () => {
+  const results = run({ sortBy: "jackpot" });
+  assert.ok(results.length > 1);
+  for (let i = 1; i < results.length; i++) assert.ok(results[i - 1].analysis.bestProfit >= results[i].analysis.bestProfit);
+  close(results[0].analysis.bestProfit, 40); // 10x A-cheap MW: A-out1 MW 50 - cost 10
+});
+
+test("minBestProfit and minJackpot filter by the size of the best case", () => {
+  const big = run({ minBestProfit: 35 });
+  assert.ok(big.length > 0 && big.every((r) => r.analysis.bestProfit >= 35));
+  const keys = run({ minJackpot: 4.5 }).map(legKey);
+  assert.ok(keys.includes("10xA-cheap:MW")); // 50 / 10 = 5x
+  assert.ok(keys.includes("1xB-cheap:FN+9xA-cheap:MW")); // 50 / 11 = 4.55x
+  assert.ok(!keys.includes("2xB-cheap:FN+8xA-cheap:MW")); // 50 / 12 = 4.17x
+});

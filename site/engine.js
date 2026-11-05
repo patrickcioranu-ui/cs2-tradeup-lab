@@ -94,11 +94,17 @@ export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0
   const minListings = counts.length ? Math.min(...counts) : null;
   const illiquid = outcomes.some((o) => o.sold24h === false || o.thin);
   const base = { complete, cost, outcomes, minListings, illiquid, missingInputs };
-  if (!complete) return { ...base, ev: null, profit: null, roi: null, pProfit: null, risk: null };
+  if (!complete) return { ...base, ev: null, profit: null, roi: null, pProfit: null, risk: null, bestProfit: null, bestChance: null, jackpotMultiple: null };
 
   const ev = outcomes.reduce((s, o) => s + o.probability * o.net, 0);
   const profit = ev - cost;
   const risk = Math.sqrt(outcomes.reduce((s, o) => s + o.probability * (o.net - ev) ** 2, 0));
   const pProfit = outcomes.filter((o) => o.net > cost).reduce((s, o) => s + o.probability, 0);
-  return { ...base, ev, profit, roi: cost > 0 ? profit / cost : null, pProfit, risk };
+  // Best case: the most valuable outcome (ties share its chance).
+  const bestNet = Math.max(...outcomes.map((o) => o.net));
+  const bestChance = outcomes.filter((o) => o.net === bestNet).reduce((s, o) => s + o.probability, 0);
+  return {
+    ...base, ev, profit, roi: cost > 0 ? profit / cost : null, pProfit, risk,
+    bestProfit: bestNet - cost, bestChance, jackpotMultiple: cost > 0 ? bestNet / cost : null,
+  };
 }

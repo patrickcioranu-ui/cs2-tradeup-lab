@@ -117,7 +117,7 @@ export function outputPool(catalog, lookup, collectionName, tier, stattrak) {
   }));
 }
 
-const SORT_KEYS = { profit: "profit", roi: "roi", chance: "pProfit" };
+const SORT_KEYS = { profit: "profit", roi: "roi", chance: "pProfit", jackpot: "bestProfit" };
 
 function comparator(sortBy) {
   const key = SORT_KEYS[sortBy] || "profit";
@@ -136,7 +136,7 @@ function legsToInputs(legs) {
 
 export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   const {
-    minProfitChance = 0, maxProfitChance = null, maxBudget = null, minProfit = null, minRoi = null, hideLowLiquidity = false, collectionQuery = "",
+    minProfitChance = 0, maxProfitChance = null, maxBudget = null, minBestProfit = null, minJackpot = null, minProfit = null, minRoi = null, hideLowLiquidity = false, collectionQuery = "",
     tiers = [0, 1, 2, 3, 4], stattrak = "normal", sortBy = "profit", limit = 50, feeRate = 0.15, fixedFee = 0,
     floatMode = "worst", thinValuation = "buy_order",
   } = opts;
@@ -177,6 +177,8 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
     if (maxProfitChance !== null && analysis.pProfit > maxProfitChance + 1e-12) return;
     if (minProfit !== null && analysis.profit < minProfit - 1e-9) return;
     if (minRoi !== null && (analysis.roi === null || analysis.roi < minRoi - 1e-12)) return;
+    if (minBestProfit !== null && analysis.bestProfit < minBestProfit - 1e-9) return;
+    if (minJackpot !== null && (analysis.jackpotMultiple === null || analysis.jackpotMultiple < minJackpot - 1e-12)) return;
     const lowLiquidity = analysis.illiquid || (analysis.minListings !== null && analysis.minListings < LOW_LIQUIDITY);
     if (hideLowLiquidity && lowLiquidity) return;
     kept.push({ tier, stattrak: st, legs, analysis, lowLiquidity });
