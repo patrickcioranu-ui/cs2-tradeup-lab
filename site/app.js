@@ -62,11 +62,24 @@ function runFinder() {
   $("#progress").hidden = false;
   $("#progressBar").style.width = "0%";
   $("#finderMessage").hidden = true;
+  let relaxed = false;
   worker.onmessage = ({ data: msg }) => {
     if (msg.type === "progress") $("#progressBar").style.width = `${Math.round(msg.value * 100)}%`;
     if (msg.type === "done") {
+      // Nothing met the profit filters: search again without them and show the best anyway.
+      const strict = opts.minProfitChance > 0 || opts.minProfit !== null || opts.minRoi !== null || opts.hideLowLiquidity;
+      if (!msg.results.length && !relaxed && strict) {
+        relaxed = true;
+        $("#progressBar").style.width = "0%";
+        worker.postMessage({ type: "search", catalog: data.catalog, prices: data.prices, opts: { ...opts, minProfitChance: 0, minProfit: null, minRoi: null, hideLowLiquidity: false } });
+        return;
+      }
       $("#progress").hidden = true;
       renderFinderResults(msg.results);
+      if (relaxed && msg.results.length) {
+        $("#finderMessage").textContent = "No trade-ups meet your profit chance, minimum profit, ROI or liquidity filters. Showing the best ones anyway; check the profit and chance columns.";
+        $("#finderMessage").hidden = false;
+      }
       worker.terminate();
       worker = null;
     }
