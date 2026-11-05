@@ -30,19 +30,30 @@ export function netSale(gross, feeRate, fixedFee = 0) {
   return Math.max(0, gross * (1 - feeRate) - fixedFee);
 }
 
-export function marketName(baseName, wearCode, stattrak) {
-  return `${stattrak ? "StatTrak™ " : ""}${baseName} (${WEAR_BY_CODE[wearCode].name})`;
+// Steam/CSFloat market name. Knives and gloves start with "★ "; StatTrak goes after the star.
+// Vanilla knives have no wear; Doppler-style phases are keyed with a " [Phase]" suffix.
+export function marketName(baseName, wearCode, stattrak, { phase = null, vanilla = false } = {}) {
+  let name = baseName;
+  if (stattrak) name = name.startsWith("★ ") ? `★ StatTrak™ ${name.slice(2)}` : `StatTrak™ ${name}`;
+  if (!vanilla) name += ` (${WEAR_BY_CODE[wearCode].name})`;
+  if (phase) name += ` [${phase}]`;
+  return name;
 }
 
 // What an output can realistically be sold for: the listing in a normal market,
 // the best buy order in a thin one (listings there can be absurd asks).
-export function saleValue(quote) {
+// thinValuation "listing" trusts a thin listing only when it is within 2x the buy order (troll guard).
+export function saleValue(quote, thinValuation = "buy_order") {
   if (!quote) return null;
-  const value = quote.thin ? quote.buy_order : quote.price;
+  let value = quote.price;
+  if (quote.thin) {
+    const order = Number.isFinite(quote.buy_order) ? quote.buy_order : null;
+    value = thinValuation === "listing" && order !== null && quote.price <= 2 * order ? quote.price : order;
+  }
   return Number.isFinite(value) ? value : null;
 }
 
-export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0 }) {
+export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0, thinValuation = "buy_order" }) {
   // An input without a known cost is never treated as free.
   const missingInputs = inputs.filter((i) => !Number.isFinite(i.cost)).length;
   const cost = missingInputs ? null : inputs.reduce((sum, i) => sum + i.cost, 0);
@@ -61,7 +72,7 @@ export function analyze({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0
       const float = outputFloat(inputs, out.minFloat, out.maxFloat);
       const wear = wearForFloat(float);
       const quote = out.prices?.[wear];
-      const gross = saleValue(quote);
+      const gross = saleValue(quote, thinValuation);
       if (gross === null) complete = false;
       outcomes.push({
         name: out.name,

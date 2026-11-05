@@ -15,7 +15,7 @@ from typing import Callable
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from cs2_tradeup.catalog import SKINS_URL, build_catalog  # noqa: E402
+from cs2_tradeup.catalog import CRATES_URL, SKINS_URL, build_catalog  # noqa: E402
 from cs2_tradeup.csfloat_prices import CSFLOAT_FEE_RATE, CSFLOAT_URL, CSFLOAT_VIA, parse_csfloat  # noqa: E402
 from cs2_tradeup.steam_prices import fetch_ecb_usd_per_eur, http_get_text, merge_prices  # noqa: E402
 
@@ -60,7 +60,7 @@ def main() -> int:
     seen_at = now.strftime(ISO)
 
     def fetch_catalog() -> dict:
-        return build_catalog(json.loads(http_get_text(SKINS_URL)), seen_at)
+        return build_catalog(json.loads(http_get_text(SKINS_URL)), seen_at, raw_crates=json.loads(http_get_text(CRATES_URL)))
 
     def fetch_prices() -> tuple:
         usd_per_eur = fetch_ecb_usd_per_eur(http_get_text)

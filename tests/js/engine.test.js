@@ -148,3 +148,32 @@ test("analyze reports incomplete when an outcome's wear has no price", () => {
   assert.equal(result.outcomes[0].wear, "FN");
   assert.equal(result.outcomes[0].net, null);
 });
+
+test("marketName handles knives: StatTrak after the star, vanilla without wear, phase suffix", () => {
+  assert.equal(marketName("★ Karambit | Doppler", "FN", true, { phase: "Ruby" }), "★ StatTrak™ Karambit | Doppler (Factory New) [Ruby]");
+  assert.equal(marketName("★ Karambit", "FT", false, { vanilla: true }), "★ Karambit");
+  assert.equal(marketName("★ Karambit", "FT", true, { vanilla: true }), "★ StatTrak™ Karambit");
+  assert.equal(marketName("★ Sport Gloves | Vice", "WW", false), "★ Sport Gloves | Vice (Well-Worn)");
+});
+
+test("thinValuation 'listing' uses the listing only when it is within 2x the buy order", () => {
+  const out = (quote) => ({ A: [{ name: "x", minFloat: 0, maxFloat: 1, prices: Object.fromEntries(WEARS.map((w) => [w.code, quote])) }] });
+  const run = (quote, thinValuation) => analyze({ inputs: tenOf("A", 1), outputsByCollection: out(quote), feeRate: 0, thinValuation }).outcomes[0].gross;
+  close(run({ price: 30, buy_order: 20, thin: true }, "listing"), 30);
+  close(run({ price: 30, buy_order: 20, thin: true }, "buy_order"), 20);
+  close(run({ price: 30, buy_order: 20, thin: true }), 20);
+  close(run({ price: 88754.77, buy_order: 12.43, thin: true }, "listing"), 12.43);
+  assert.equal(run({ price: 500, buy_order: null, thin: true }, "listing"), null);
+});
+
+test("analyze works with 5-input (knife) contracts", () => {
+  const inputs = Array.from({ length: 5 }, (_, i) => ({ collection: i < 3 ? "A" : "B", float: 0.1, minFloat: 0, maxFloat: 1, cost: 10 }));
+  const result = analyze({
+    inputs,
+    outputsByCollection: { A: [{ name: "k1", minFloat: 0, maxFloat: 1, prices: allWears(100) }], B: [{ name: "k2", minFloat: 0, maxFloat: 1, prices: allWears(10) }] },
+    feeRate: 0,
+  });
+  close(result.outcomes[0].probability, 0.6);
+  close(result.cost, 50);
+  close(result.ev, 64);
+});

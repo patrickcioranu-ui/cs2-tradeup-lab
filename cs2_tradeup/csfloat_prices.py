@@ -29,11 +29,23 @@ def parse_csfloat(payload: dict, fx: float, seen_at: str) -> dict[str, dict]:
         if listing is None:
             continue
         order = _price(entry.get("highest_order"))
-        prices[name] = {
-            "price": round(listing * fx, 2),
-            "buy_order": None if order is None else round(order * fx, 2),
-            "thin": order is None or order < THIN_SPREAD * listing,
-            "listings": None,
-            "seen_at": seen_at,
-        }
+        prices[name] = _entry(listing, order, fx, seen_at)
+        # Doppler-style finishes: one entry per phase, keyed "<name> [<phase>]".
+        phase_listings = (entry.get("starting_at") or {}).get("doppler") or {}
+        phase_orders = (entry.get("highest_order") or {}).get("doppler") or {}
+        for phase, phase_listing in phase_listings.items():
+            if isinstance(phase_listing, (int, float)) and phase_listing > 0:
+                phase_order = phase_orders.get(phase)
+                phase_order = phase_order if isinstance(phase_order, (int, float)) and phase_order > 0 else None
+                prices[f"{name} [{phase}]"] = _entry(phase_listing, phase_order, fx, seen_at)
     return prices
+
+
+def _entry(listing: float, order: float | None, fx: float, seen_at: str) -> dict:
+    return {
+        "price": round(listing * fx, 2),
+        "buy_order": None if order is None else round(order * fx, 2),
+        "thin": order is None or order < THIN_SPREAD * listing,
+        "listings": None,
+        "seen_at": seen_at,
+    }

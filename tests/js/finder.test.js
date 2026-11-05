@@ -119,3 +119,37 @@ test("collectionQuery keeps trade-ups using a matching collection, case-insensit
   assert.ok(!beta.map(legKey).includes("10xA-cheap:MW"));
   assert.equal(run({ collectionQuery: "  " }).length, run({}).length);
 });
+
+// Doppler phases are one outcome, valued by phase odds: each gem 0.5%, regular phases share the rest.
+const DOPPLER = 0.995 * 200 + 0.005 * 1000;
+const ST_DOPPLER = 0.995 * 300 + 0.005 * 1500;
+
+test("knife tier: 5 Covert inputs; a Doppler finish is one outcome weighted by phase odds; gloves for normal inputs", () => {
+  const [best] = run({ tiers: [5] });
+  assert.equal(legKey(best), "5xA-covert:MW");
+  assert.equal(best.legs[0].count, 5);
+  close(best.analysis.cost, 50);
+  assert.deepEqual(best.analysis.outcomes.map((o) => o.name).sort(), ["★ G-gloves | Vice", "★ K-knife | Doppler", "★ K-vanilla"]);
+  close(best.analysis.outcomes[0].probability, 1 / 3);
+  close(best.analysis.ev, (DOPPLER + 150 + 40) / 3); // thin gloves valued at their buy order
+});
+
+test("knife tier StatTrak returns knives only, priced as StatTrak knives", () => {
+  const [best] = run({ tiers: [5], stattrak: "stattrak" });
+  assert.equal(best.stattrak, true);
+  assert.deepEqual(best.analysis.outcomes.map((o) => o.name).sort(), ["★ StatTrak™ K-knife | Doppler", "★ StatTrak™ K-vanilla"]);
+  close(best.analysis.ev, (ST_DOPPLER + 200) / 2);
+});
+
+test("thinValuation 'listing' values thin outputs at the listing when within 2x the buy order", () => {
+  const [best] = run({ tiers: [5], thinValuation: "listing" });
+  close(best.analysis.ev, (DOPPLER + 150 + 80) / 3);
+});
+
+test("floatMode picks worst, middle or best float inside the bought wear", () => {
+  const float = (floatMode) => inputOptions(catalog, lookup, 2, false, floatMode).get("Alpha")[0].float;
+  close(float("worst"), 0.1499);
+  close(float("best"), 0.07);
+  close(float("middle"), (0.07 + 0.1499) / 2);
+  close(float(undefined), 0.1499);
+});

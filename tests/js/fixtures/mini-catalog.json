@@ -3,28 +3,145 @@
   "collections": {
     "Alpha": {
       "2": [
-        { "id": "a1", "market_base_name": "A-cheap", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": true },
-        { "id": "a2", "market_base_name": "A-pricey", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false }
+        {
+          "id": "a1",
+          "market_base_name": "A-cheap",
+          "rarity": 2,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": true
+        },
+        {
+          "id": "a2",
+          "market_base_name": "A-pricey",
+          "rarity": 2,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        }
       ],
       "3": [
-        { "id": "a3", "market_base_name": "A-out1", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": true },
-        { "id": "a4", "market_base_name": "A-out2", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": false }
+        {
+          "id": "a3",
+          "market_base_name": "A-out1",
+          "rarity": 3,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": true
+        },
+        {
+          "id": "a4",
+          "market_base_name": "A-out2",
+          "rarity": 3,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        }
+      ],
+      "5": [
+        {
+          "id": "a5",
+          "market_base_name": "A-covert",
+          "rarity": 5,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": true
+        }
       ]
     },
     "Beta": {
       "2": [
-        { "id": "b1", "market_base_name": "B-cheap", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false },
-        { "id": "b2", "market_base_name": "B-pricey", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false }
+        {
+          "id": "b1",
+          "market_base_name": "B-cheap",
+          "rarity": 2,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        },
+        {
+          "id": "b2",
+          "market_base_name": "B-pricey",
+          "rarity": 2,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        }
       ],
       "3": [
-        { "id": "b3", "market_base_name": "B-out1", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": false },
-        { "id": "b4", "market_base_name": "B-out2", "rarity": 3, "min_float": 0, "max_float": 1, "stattrak_available": false }
+        {
+          "id": "b3",
+          "market_base_name": "B-out1",
+          "rarity": 3,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        },
+        {
+          "id": "b4",
+          "market_base_name": "B-out2",
+          "rarity": 3,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        }
       ]
     },
     "Gamma": {
       "2": [
-        { "id": "g1", "market_base_name": "G-lonely", "rarity": 2, "min_float": 0, "max_float": 1, "stattrak_available": false }
+        {
+          "id": "g1",
+          "market_base_name": "G-lonely",
+          "rarity": 2,
+          "min_float": 0,
+          "max_float": 1,
+          "stattrak_available": false
+        }
       ]
     }
+  },
+  "special_pools": {
+    "Alpha": [
+      {
+        "id": "kv",
+        "market_base_name": "★ K-vanilla",
+        "phase": null,
+        "kind": "knife",
+        "vanilla": true,
+        "min_float": 0,
+        "max_float": 1,
+        "stattrak_available": true
+      },
+      {
+        "id": "kp1",
+        "market_base_name": "★ K-knife | Doppler",
+        "phase": "Phase 1",
+        "kind": "knife",
+        "vanilla": false,
+        "min_float": 0,
+        "max_float": 0.08,
+        "stattrak_available": true
+      },
+      {
+        "id": "kr",
+        "market_base_name": "★ K-knife | Doppler",
+        "phase": "Ruby",
+        "kind": "knife",
+        "vanilla": false,
+        "min_float": 0,
+        "max_float": 0.08,
+        "stattrak_available": true
+      },
+      {
+        "id": "g",
+        "market_base_name": "★ G-gloves | Vice",
+        "phase": null,
+        "kind": "glove",
+        "vanilla": false,
+        "min_float": 0.06,
+        "max_float": 0.8,
+        "stattrak_available": false
+      }
+    ]
   }
 }

@@ -1,7 +1,8 @@
 import { WEARS, analyze, marketName, wearForFloat } from "./engine.js";
 import { loadData, priceLookup, priceSource } from "./data.js";
+import { contractSize, hasOutputs, outputPool } from "./finder.js";
 
-const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert"];
+const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert", "Knife/Gloves"];
 const WEAR_NAME = Object.fromEntries(WEARS.map((w) => [w.code, w.name]));
 const currency = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" });
 const percent = new Intl.NumberFormat("en-GB", { style: "percent", maximumFractionDigits: 1 });
@@ -43,7 +44,9 @@ function finderOptions() {
     collectionQuery: $("#collectionQuery").value,
     minProfitChance: Number.isFinite(minChance) ? Math.min(Math.max(minChance, 0), 100) / 100 : 0.5,
     maxBudget: budgetRaw === "" ? null : Number(budgetRaw),
-    tiers: tier === "all" ? [0, 1, 2, 3, 4] : [Number(tier)],
+    tiers: tier === "all" ? [0, 1, 2, 3, 4, 5] : [Number(tier)],
+    floatMode: $("#floatMode").value,
+    thinValuation: $("#thinValuation").value,
     stattrak: $("#stattrakSelect").value,
     sortBy: $("#sortSelect").value,
     limit: Number($("#limitSelect").value) || 50,
@@ -72,7 +75,12 @@ function runFinder() {
       showFinderMessage(`Search failed: ${msg.message}`);
     }
   };
-  worker.postMessage({ type: "search", catalog: data.catalog, prices: data.prices, opts: finderOptions() });
+  const opts = finderOptions();
+  const floatLabel = { worst: "worst float in each wear (safe)", middle: "middle float of each wear", best: "best float in each wear (optimistic)" }[opts.floatMode];
+  const thinLabel = opts.thinValuation === "listing" ? "listing when within 2× the buy order" : "best buy order (safe)";
+  $("#finderMode").textContent = `Assumptions: inputs bought at the cheapest listing with the ${floatLabel}; thin-market outputs valued at the ${thinLabel}.`;
+  $("#finderMode").hidden = false;
+  worker.postMessage({ type: "search", catalog: data.catalog, prices: data.prices, opts });
 }
 
 function showFinderMessage(text) {
@@ -126,7 +134,7 @@ function skinsAt(collectionName, tier, stattrak) {
 
 function eligibleCollections() {
   return Object.keys(data.catalog.collections).filter(
-    (name) => skinsAt(name, calc.tier, calc.stattrak).length && skinsAt(name, calc.tier + 1, calc.stattrak).length,
+    (name) => skinsAt(name, calc.tier, calc.stattrak).length && hasOutputs(data.catalog, name, calc.tier, calc.stattrak),
   );
 }
 
@@ -154,7 +162,7 @@ function resetRow(row, collection) {
 function resetCalculator() {
   const collections = eligibleCollections();
   calc.overrides = {};
-  calc.rows = Array.from({ length: 10 }, () => {
+  calc.rows = Array.from({ length: contractSize(calc.tier) }, () => {
     const row = { float: 0.2 };
     if (collections.length) resetRow(row, collections[0]);
     return row;
@@ -201,16 +209,14 @@ function renderInputs() {
 function outputsByCollection() {
   const result = {};
   for (const collection of new Set(calc.rows.map((r) => r.collection))) {
-    result[collection] = skinsAt(collection, calc.tier + 1, calc.stattrak).map((skin) => {
-      const name = `${calc.stattrak ? "StatTrak™ " : ""}${skin.market_base_name}`;
-      const prices = {};
+    // Same pool and prices as the finder, plus any values typed over them.
+    result[collection] = outputPool(data.catalog, data.lookup, collection, calc.tier + 1, calc.stattrak).map((out) => {
+      const prices = { ...out.prices };
       for (const w of WEARS) {
-        const override = calc.overrides[`${name}|${w.code}`];
-        const quote = data.lookup(marketName(skin.market_base_name, w.code, calc.stattrak));
-        if (override !== undefined) prices[w.code] = { ...(quote || {}), price: override, thin: false };
-        else if (quote) prices[w.code] = quote;
+        const override = calc.overrides[`${out.name}|${w.code}`];
+        if (override !== undefined) prices[w.code] = { ...(prices[w.code] || {}), price: override, thin: false };
       }
-      return { name, minFloat: skin.min_float, maxFloat: skin.max_float, prices };
+      return { ...out, prices };
     });
   }
   return result;
@@ -258,7 +264,7 @@ function renderAnalysis(analysis) {
   $("#errorBox").hidden = true;
   const a = analysis;
   $("#metrics").innerHTML = [
-    metric("Input cost", currency.format(a.cost), "10 items"),
+    metric("Input cost", currency.format(a.cost), `${calc.rows.length} items`),
     metric("Expected value", currency.format(a.ev), "after sale fees"),
     metric("Expected profit", signed(a.profit), a.roi === null ? "" : `ROI ${percent.format(a.roi)}`, a.profit >= 0),
     metric("P(profit)", percent.format(a.pProfit), "chance an outcome beats the cost"),
@@ -288,7 +294,8 @@ function renderCalculator() {
   if (!calc.rows.length || !calc.rows.every((r) => findSkin(r))) resetCalculator();
   renderInputs();
   if (!eligibleCollections().length) return;
-  const analysis = analyze({ inputs: calcInputs(), outputsByCollection: outputsByCollection(), ...fees() });
+  $("#calcCount").textContent = `${contractSize(calc.tier)} required`;
+  const analysis = analyze({ inputs: calcInputs(), outputsByCollection: outputsByCollection(), ...fees(), thinValuation: $("#thinValuation").value });
   renderOutputs(analysis);
   renderAnalysis(analysis);
 }
@@ -333,7 +340,7 @@ async function boot() {
   $("#outputGroups").addEventListener("change", onOverrideChange);
   $("#calcTier").addEventListener("change", (e) => { calc.tier = Number(e.target.value); calc.rows = []; renderCalculator(); });
   $("#calcStattrak").addEventListener("change", (e) => { calc.stattrak = e.target.checked; calc.rows = []; renderCalculator(); });
-  for (const id of ["#steamFee", "#fixedFee"]) $(id).addEventListener("change", renderCalculator);
+  for (const id of ["#steamFee", "#fixedFee", "#thinValuation"]) $(id).addEventListener("change", renderCalculator);
 
   try {
     const loaded = await loadData();

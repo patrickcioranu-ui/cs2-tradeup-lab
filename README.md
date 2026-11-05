@@ -30,7 +30,15 @@ ROI or chance of profit.
   trade-up that needs one is skipped. Listings are not guaranteed sale prices.
 - **Exit:** selling on CSFloat, 2% sale fee by default (adjustable).
   Earlier versions used Steam Market median sale prices, which were badly off for many skins.
-- **Not covered yet:** knife/glove trade-ups (5 Covert inputs), souvenir inputs, and mixes of three or more collections.
+- **Knife and glove trade-ups:** 5 Covert inputs from weapon cases give a knife or gloves from that case's pool
+  (each case gets its share of the 5 inputs, then an even pick across its knife/glove finishes). 5 StatTrak Coverts
+  give StatTrak knives only. Doppler/Gamma Doppler finishes count as one outcome, valued by phase odds: Valve
+  publishes none, so we use the cautious community estimate of 0.5% per gem (Ruby, Sapphire, Black Pearl, Emerald)
+  and split the rest evenly over Phases 1–4.
+- **Optimism settings:** *Input float* (worst / middle / best float in the wear you buy at the cheapest price) and
+  *Value thin outputs at* (best buy order, or the listing when it is within 2× the buy order). The defaults are the
+  safe choices; many trade-up sites effectively use "best float" and "listing", which is why they show bigger profits.
+- **Not covered yet:** souvenir inputs and mixes of three or more collections.
 
 ## Data refresh
 

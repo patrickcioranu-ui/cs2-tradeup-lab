@@ -59,6 +59,7 @@
                 <option value="2">Mil-Spec → Restricted</option>
                 <option value="3">Restricted → Classified</option>
                 <option value="4">Classified → Covert</option>
+                <option value="5">Covert → Knife/Gloves (5 inputs)</option>
               </select>
             </label>
             <label>StatTrak
@@ -88,6 +89,19 @@
                 <option value="500">Top 500</option>
               </select>
             </label>
+            <label title="Which float you are assumed to get when buying the cheapest listing of a wear">Input float
+              <select id="floatMode">
+                <option value="worst">Worst in wear (safe)</option>
+                <option value="middle">Middle of wear</option>
+                <option value="best">Best in wear (optimistic)</option>
+              </select>
+            </label>
+            <label title="Thin market: no buy order near the listing">Value thin outputs at
+              <select id="thinValuation">
+                <option value="buy_order">Buy order (safe)</option>
+                <option value="listing">Listing (if ≤ 2× buy order)</option>
+              </select>
+            </label>
             <label class="checkbox"><input id="hideLowLiquidity" type="checkbox" /> Hide low liquidity</label>
             <div class="controls-action">
               <button id="findButton" class="primary-button" type="button" disabled><span>Find trade-ups</span><span class="button-arrow">↗</span></button>
@@ -95,6 +109,7 @@
           </div>
           <div class="progress" id="progress" hidden><div class="progress-bar" id="progressBar"></div></div>
           <div id="finderMessage" class="finder-message" hidden></div>
+          <p id="finderMode" class="panel-description" hidden></p>
           <div class="table-wrap" id="finderTableWrap" hidden>
             <table>
               <thead>
@@ -113,7 +128,7 @@
                 <span class="panel-kicker">02 / CALCULATOR</span>
                 <h2>Input items</h2>
               </div>
-              <span class="count-pill">10 required</span>
+              <span class="count-pill" id="calcCount">10 required</span>
             </div>
             <div class="calc-options">
               <label>Tier <select id="calcTier">
@@ -122,6 +137,7 @@
                 <option value="2" selected>Mil-Spec → Restricted</option>
                 <option value="3">Restricted → Classified</option>
                 <option value="4">Classified → Covert</option>
+                <option value="5">Covert → Knife/Gloves</option>
               </select></label>
               <label class="checkbox"><input id="calcStattrak" type="checkbox" /> StatTrak™</label>
             </div>

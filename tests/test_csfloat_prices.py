@@ -15,6 +15,8 @@ class CsfloatParseTests(unittest.TestCase):
             "P90 | Glacier Mesh (Battle-Scarred)": {"price": 11.21, "starting_at": {"price": 11.21}, "highest_order": {"price": 5.0}},
             "No Orders (Field-Tested)": {"price": 3.0, "starting_at": {"price": 3.0}, "highest_order": None},
             "Unlisted (Factory New)": {"price": None, "starting_at": None, "highest_order": {"price": 2.0}},
+            "★ Karambit | Doppler (Factory New)": {"price": 1080, "starting_at": {"price": 1080, "doppler": {"Phase 3": 1080, "Ruby": 6450}},
+                                                     "highest_order": {"price": 990, "doppler": {"Phase 3": 1030}}},
         }
         self.prices = parse_csfloat(payload, 0.5, SEEN)
 
@@ -41,7 +43,14 @@ class CsfloatParseTests(unittest.TestCase):
                               fee_rate=CSFLOAT_FEE_RATE, via="prices.csgotrader.app (CSFloat)")
         self.assertEqual(list(merged["sources"]), ["csfloat"])
         self.assertEqual(merged["sources"]["csfloat"]["fee_rate"], 0.02)
-        self.assertEqual(len(merged["sources"]["csfloat"]["prices"]), 3)
+        self.assertEqual(len(merged["sources"]["csfloat"]["prices"]), 6)
+
+    def test_doppler_phases_get_their_own_entries(self):
+        ruby = self.prices["★ Karambit | Doppler (Factory New) [Ruby]"]
+        self.assertEqual((ruby["price"], ruby["buy_order"], ruby["thin"]), (3225.0, None, True))
+        p3 = self.prices["★ Karambit | Doppler (Factory New) [Phase 3]"]
+        self.assertEqual((p3["price"], p3["buy_order"], p3["thin"]), (540.0, 515.0, False))
+        self.assertEqual(self.prices["★ Karambit | Doppler (Factory New)"]["price"], 540.0)
 
 
 if __name__ == "__main__":

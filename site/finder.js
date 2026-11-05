@@ -2,25 +2,43 @@
 import { WEARS, analyze, marketName, normalizeFloat } from "./engine.js";
 
 const LOW_LIQUIDITY = 10;
+// Tier 5 = Covert -> knife/gloves (5-input contract, Oct 2025). Tiers 0-4 use 10 inputs.
+export const KNIFE_TIER = 5;
+export const contractSize = (tier) => (tier === KNIFE_TIER ? 5 : 10);
 
 function wearAvailable(skin, wear) {
   return skin.min_float < wear.max && skin.max_float >= wear.min;
 }
 
-// Conservative assumption (spec §4.4): you get the worst float inside the wear you buy.
-function worstFloat(skin, wear) {
-  return wear.code === "BS" ? skin.max_float : Math.min(skin.max_float, wear.max - 0.0001);
+// Which float you get when buying the cheapest listing of a wear.
+// "worst" (default, conservative, spec §4.4), "best" (optimistic, like most trade-up sites) or "middle".
+function inputFloat(skin, wear, floatMode = "worst") {
+  const worst = wear.code === "BS" ? skin.max_float : Math.min(skin.max_float, wear.max - 0.0001);
+  const best = Math.max(skin.min_float, wear.min);
+  if (floatMode === "best") return best;
+  if (floatMode === "middle") return (best + worst) / 2;
+  return worst;
+}
+
+// Knife/glove pool of a case collection; StatTrak contracts can only return knives.
+function specialPool(catalog, collectionName, stattrak) {
+  return ((catalog.special_pools || {})[collectionName] || []).filter((s) => !stattrak || (s.kind === "knife" && s.stattrak_available));
+}
+
+export function hasOutputs(catalog, collectionName, tier, stattrak) {
+  if (tier === KNIFE_TIER) return specialPool(catalog, collectionName, stattrak).length > 0;
+  return skinsAt(catalog.collections[collectionName], tier + 1, stattrak).length > 0;
 }
 
 function skinsAt(collection, tier, stattrak) {
   return (collection[String(tier)] || []).filter((s) => !stattrak || s.stattrak_available);
 }
 
-export function inputOptions(catalog, lookup, tier, stattrak) {
+export function inputOptions(catalog, lookup, tier, stattrak, floatMode = "worst") {
   const result = new Map();
   for (const [name, collection] of Object.entries(catalog.collections)) {
     const inputs = skinsAt(collection, tier, stattrak);
-    if (!inputs.length || !skinsAt(collection, tier + 1, stattrak).length) continue;
+    if (!inputs.length || !hasOutputs(catalog, name, tier, stattrak)) continue;
 
     const cheapest = [];
     for (const wear of WEARS) {
@@ -30,7 +48,7 @@ export function inputOptions(catalog, lookup, tier, stattrak) {
         const quote = lookup(marketName(skin.market_base_name, wear.code, stattrak));
         if (!quote || !(quote.price > 0) || quote.listings === 0) continue;
         if (!best || quote.price < best.price) {
-          const float = worstFloat(skin, wear);
+          const float = inputFloat(skin, wear, floatMode);
           best = { collection: name, skin, wear: wear.code, float, norm: normalizeFloat(float, skin.min_float, skin.max_float), price: quote.price, listings: quote.listings };
         }
       }
@@ -43,7 +61,54 @@ export function inputOptions(catalog, lookup, tier, stattrak) {
   return result;
 }
 
-function outputPool(catalog, lookup, collectionName, tier, stattrak) {
+function specialName(entry, stattrak) {
+  return stattrak ? `★ StatTrak™ ${entry.market_base_name.slice(2)}` : entry.market_base_name;
+}
+
+// Valve publishes no Doppler phase odds. Community estimates put each gem at ~0.4-2%;
+// we use the cautious 0.5% per gem and split the rest evenly over the regular phases.
+export const GEM_PHASE_ODDS = 0.005;
+const GEMS = new Set(["Ruby", "Sapphire", "Black Pearl", "Emerald"]);
+
+// One quote for a whole Doppler-style finish at one wear: phase prices weighted by phase odds.
+function phaseWeightedQuote(entries, quoteFor) {
+  const quotes = entries.map((e) => ({ gem: GEMS.has(e.phase), q: quoteFor(e) })).filter((x) => x.q);
+  const regular = quotes.filter((x) => !x.gem);
+  if (!regular.length) return undefined;
+  const gems = quotes.filter((x) => x.gem);
+  const regularWeight = (1 - GEM_PHASE_ODDS * gems.length) / regular.length;
+  const weighted = [...regular.map((x) => ({ ...x, w: regularWeight })), ...gems.map((x) => ({ ...x, w: GEM_PHASE_ODDS }))];
+  const allOrders = weighted.every((x) => Number.isFinite(x.q.buy_order));
+  return {
+    price: weighted.reduce((sum, x) => sum + x.w * x.q.price, 0),
+    buy_order: allOrders ? weighted.reduce((sum, x) => sum + x.w * x.q.buy_order, 0) : null,
+    thin: regular.some((x) => x.q.thin),
+    listings: null,
+  };
+}
+
+export function outputPool(catalog, lookup, collectionName, tier, stattrak) {
+  if (tier === KNIFE_TIER + 1) {
+    // Group phases of the same finish (e.g. all "★ Karambit | Doppler" phases) into one outcome.
+    const finishes = new Map();
+    for (const entry of specialPool(catalog, collectionName, stattrak)) {
+      if (!finishes.has(entry.market_base_name)) finishes.set(entry.market_base_name, []);
+      finishes.get(entry.market_base_name).push(entry);
+    }
+    return [...finishes.values()].map((entries) => {
+      const [first] = entries;
+      const quoteFor = (wear) => (e) => lookup(marketName(e.market_base_name, wear, stattrak, { phase: e.phase, vanilla: e.vanilla }));
+      const phased = entries.some((e) => e.phase);
+      return {
+        name: specialName(first, stattrak),
+        minFloat: first.min_float,
+        maxFloat: first.max_float,
+        prices: Object.fromEntries(
+          WEARS.map((w) => [w.code, phased ? phaseWeightedQuote(entries, quoteFor(w.code)) : quoteFor(w.code)(first)]).filter(([, q]) => q),
+        ),
+      };
+    });
+  }
   return skinsAt(catalog.collections[collectionName], tier, stattrak).map((skin) => ({
     name: `${stattrak ? "StatTrak™ " : ""}${skin.market_base_name}`,
     minFloat: skin.min_float,
@@ -73,6 +138,7 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   const {
     minProfitChance = 0, maxBudget = null, minProfit = null, minRoi = null, hideLowLiquidity = false, collectionQuery = "",
     tiers = [0, 1, 2, 3, 4], stattrak = "normal", sortBy = "profit", limit = 50, feeRate = 0.15, fixedFee = 0,
+    floatMode = "worst", thinValuation = "buy_order",
   } = opts;
   const query = String(collectionQuery || "").trim().toLowerCase();
   const modes = stattrak === "both" ? [false, true] : [stattrak === "stattrak"];
@@ -83,13 +149,13 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   let total = 0;
   for (const tier of tiers) {
     for (const st of modes) {
-      const options = inputOptions(catalog, lookup, tier, st);
+      const options = inputOptions(catalog, lookup, tier, st, floatMode);
       const groups = [...options.entries()];
       const pools = Object.fromEntries(groups.map(([name]) => [name, outputPool(catalog, lookup, name, tier + 1, st)]));
       let work = 0;
       for (let i = 0; i < groups.length; i++) {
         work += groups[i][1].length;
-        for (let j = i + 1; j < groups.length; j++) work += groups[i][1].length * groups[j][1].length * 9;
+        for (let j = i + 1; j < groups.length; j++) work += groups[i][1].length * groups[j][1].length * (contractSize(tier) - 1);
       }
       spaces.push({ tier, st, groups, pools });
       total += work;
@@ -106,7 +172,7 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
     if (query && !legs.some((l) => l.option.collection.toLowerCase().includes(query))) return;
     const outputsByCollection = {};
     for (const l of legs) outputsByCollection[l.option.collection] = pools[l.option.collection];
-    const analysis = analyze({ inputs: legsToInputs(legs), outputsByCollection, feeRate, fixedFee });
+    const analysis = analyze({ inputs: legsToInputs(legs), outputsByCollection, feeRate, fixedFee, thinValuation });
     if (!analysis.complete || analysis.pProfit < minProfitChance - 1e-12) return;
     if (minProfit !== null && analysis.profit < minProfit - 1e-9) return;
     if (minRoi !== null && (analysis.roi === null || analysis.roi < minRoi - 1e-12)) return;
@@ -123,15 +189,16 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   };
 
   for (const { tier, st, groups, pools } of spaces) {
+    const size = contractSize(tier);
     for (let i = 0; i < groups.length; i++) {
       for (const a of groups[i][1]) {
-        consider(tier, st, [{ option: a, count: 10 }], pools);
+        consider(tier, st, [{ option: a, count: size }], pools);
         report();
       }
       for (let j = i + 1; j < groups.length; j++) {
         for (const a of groups[i][1]) {
           for (const b of groups[j][1]) {
-            for (let k = 1; k <= 9; k++) consider(tier, st, [{ option: a, count: k }, { option: b, count: 10 - k }], pools);
+            for (let k = 1; k < size; k++) consider(tier, st, [{ option: a, count: k }, { option: b, count: size - k }], pools);
             report();
           }
         }

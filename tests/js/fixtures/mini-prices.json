@@ -5,25 +5,164 @@
     "steam": {
       "fee_rate": 0.15,
       "prices": {
-        "A-cheap (Minimal Wear)": { "price": 1.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
-        "A-pricey (Minimal Wear)": { "price": 5.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
-        "A-pricey (Field-Tested)": { "price": 4.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
-        "A-cheap (Battle-Scarred)": { "price": 0.2, "listings": 0, "seen_at": "2026-11-04T12:00:00Z" },
-        "StatTrak™ A-cheap (Minimal Wear)": { "price": 3.0, "listings": 20, "seen_at": "2026-11-04T12:00:00Z" },
-        "A-out1 (Minimal Wear)": { "price": 50.0, "listings": 40, "seen_at": "2026-11-04T12:00:00Z" },
-        "A-out1 (Field-Tested)": { "price": 10.0, "listings": 40, "seen_at": "2026-11-04T12:00:00Z" },
-        "A-out2 (Minimal Wear)": { "price": 20.0, "listings": 30, "seen_at": "2026-11-04T12:00:00Z" },
-        "A-out2 (Field-Tested)": { "price": 2.0, "listings": 30, "seen_at": "2026-11-04T12:00:00Z" },
-        "StatTrak™ A-out1 (Minimal Wear)": { "price": 100.0, "listings": 4, "seen_at": "2026-11-04T12:00:00Z" },
-        "StatTrak™ A-out1 (Field-Tested)": { "price": 20.0, "listings": 4, "seen_at": "2026-11-04T12:00:00Z" },
-        "B-cheap (Factory New)": { "price": 2.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
-        "B-cheap (Field-Tested)": { "price": 0.5, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
-        "B-pricey (Battle-Scarred)": { "price": 3.0, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" },
-        "B-out1 (Minimal Wear)": { "price": 4.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
-        "B-out1 (Field-Tested)": { "price": 3.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
-        "B-out2 (Minimal Wear)": { "price": 4.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
-        "B-out2 (Field-Tested)": { "price": 1.0, "listings": 25, "seen_at": "2026-11-04T12:00:00Z" },
-        "G-lonely (Field-Tested)": { "price": 0.1, "listings": 50, "seen_at": "2026-11-04T12:00:00Z" }
+        "A-cheap (Minimal Wear)": {
+          "price": 1.0,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-pricey (Minimal Wear)": {
+          "price": 5.0,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-pricey (Field-Tested)": {
+          "price": 4.0,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-cheap (Battle-Scarred)": {
+          "price": 0.2,
+          "listings": 0,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "StatTrak™ A-cheap (Minimal Wear)": {
+          "price": 3.0,
+          "listings": 20,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-out1 (Minimal Wear)": {
+          "price": 50.0,
+          "listings": 40,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-out1 (Field-Tested)": {
+          "price": 10.0,
+          "listings": 40,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-out2 (Minimal Wear)": {
+          "price": 20.0,
+          "listings": 30,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-out2 (Field-Tested)": {
+          "price": 2.0,
+          "listings": 30,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "StatTrak™ A-out1 (Minimal Wear)": {
+          "price": 100.0,
+          "listings": 4,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "StatTrak™ A-out1 (Field-Tested)": {
+          "price": 20.0,
+          "listings": 4,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-cheap (Factory New)": {
+          "price": 2.0,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-cheap (Field-Tested)": {
+          "price": 0.5,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-pricey (Battle-Scarred)": {
+          "price": 3.0,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-out1 (Minimal Wear)": {
+          "price": 4.0,
+          "listings": 25,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-out1 (Field-Tested)": {
+          "price": 3.0,
+          "listings": 25,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-out2 (Minimal Wear)": {
+          "price": 4.0,
+          "listings": 25,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "B-out2 (Field-Tested)": {
+          "price": 1.0,
+          "listings": 25,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "G-lonely (Field-Tested)": {
+          "price": 0.1,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "A-covert (Minimal Wear)": {
+          "price": 10,
+          "buy_order": 9.5,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "StatTrak™ A-covert (Minimal Wear)": {
+          "price": 20,
+          "buy_order": 19,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ K-knife | Doppler (Factory New) [Phase 1]": {
+          "price": 200,
+          "buy_order": 190,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ K-knife | Doppler (Factory New) [Ruby]": {
+          "price": 1000,
+          "buy_order": 950,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ K-vanilla": {
+          "price": 150,
+          "buy_order": 140,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ G-gloves | Vice (Field-Tested)": {
+          "price": 80,
+          "buy_order": 40,
+          "thin": true,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ StatTrak™ K-knife | Doppler (Factory New) [Phase 1]": {
+          "price": 300,
+          "buy_order": 290,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ StatTrak™ K-knife | Doppler (Factory New) [Ruby]": {
+          "price": 1500,
+          "buy_order": 1400,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        },
+        "★ StatTrak™ K-vanilla": {
+          "price": 200,
+          "buy_order": 190,
+          "thin": false,
+          "listings": 50,
+          "seen_at": "2026-11-04T12:00:00Z"
+        }
       }
     }
   }
