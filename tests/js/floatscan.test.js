@@ -47,9 +47,40 @@ test("rows with a missing output price are kept but incomplete", () => {
   assert.equal(rows[1].analysis.profit, null);
 });
 
-test("each row carries the inputs at that range's float, for the details view", () => {
+test("each row carries the inputs at the float you'd buy: just under the range's limit", () => {
   const [first] = scan(inputsAt(0.2));
   assert.equal(first.inputs.length, 10);
-  close(first.inputs[0].float, 0.035);
+  assert.ok(first.inputs[0].float < 0.07 && first.inputs[0].float > 0.069);
   assert.equal(first.inputs[0].label, "In");
+});
+
+const listingByWear = { FN: 10, MW: 5, FT: 2, WW: 1.5, BS: 1 };
+const scanPriced = (priceFor) =>
+  floatScan({ inputs: inputsAt(0.2), outputsByCollection: { A: [{ name: "Out", minFloat: 0, maxFloat: 1, prices }] }, feeRate: 0, priceFor });
+
+test("rows that need a different input wear are priced at that wear's cheapest listing", () => {
+  const rows = scanPriced((input, wear) => listingByWear[wear]);
+  close(rows[0].analysis.cost, 100); // FN inputs at 10 each
+  close(rows[0].analysis.profit, 0); // FN output 100
+  close(rows[1].analysis.cost, 50); // MW at 5
+  close(rows[2].analysis.cost, 20); // same wear as now (FT): keeps the cost-column price, 2
+  close(rows[4].analysis.cost, 10); // BS at 1
+  assert.deepEqual(rows[0].fallbacks, []);
+});
+
+test("an input with no listing for that wear keeps its cost-column price and is reported", () => {
+  const rows = scanPriced((input, wear) => (wear === "FN" ? undefined : listingByWear[wear]));
+  close(rows[0].analysis.cost, 20);
+  assert.deepEqual(rows[0].fallbacks, ["In"]);
+});
+
+test("without priceFor, every row uses the cost column", () => {
+  close(scan(inputsAt(0.2))[0].analysis.cost, 20);
+});
+
+test("the 'your floats' row uses your actual inputs: their floats and cost-column prices", () => {
+  const rows = scanPriced((input, wear) => listingByWear[wear]);
+  const current = rows.find((r) => r.current);
+  close(current.analysis.cost, 20);
+  close(current.inputs[0].float, 0.2);
 });

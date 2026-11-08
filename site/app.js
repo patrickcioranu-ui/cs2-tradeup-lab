@@ -487,7 +487,8 @@ function renderFloatScan() {
     return;
   }
   $("#floatScanMessage").hidden = true;
-  const rows = floatScan({ inputs, outputsByCollection: outputsByCollection(), ...fees(), thinValuation: $("#thinValuation").value });
+  const priceFor = (input, wear) => data.lookup(marketName(input.label, wear, calc.stattrak))?.price;
+  const rows = floatScan({ inputs, outputsByCollection: outputsByCollection(), ...fees(), thinValuation: $("#thinValuation").value, priceFor });
   lastScanRows = rows;
   $("#floatScanTable").innerHTML = rows.map((r, index) => {
     const a = r.analysis;
@@ -500,6 +501,7 @@ function renderFloatScan() {
       <tr class="clickable-scan ${tone} ${r.current ? "scan-current" : ""}" data-scan="${index}" tabindex="0" title="Show full details for this float range">
         <td class="legs">${r.maxW >= 1 - 1e-9 ? "any float" : limits.split("<br>").map(escapeHtml).join("<br>")}</td>
         <td>${lands}</td>
+        <td>${a.cost === null ? "—" : currency.format(a.cost)}${r.fallbacks.length ? ` <span class="badge" title="No listing for ${escapeHtml(r.fallbacks.join(", "))} in this wear; your cost-column price was used">no listing</span>` : ""}</td>
         <td>${a.ev === null ? "missing price" : currency.format(a.ev)}</td>
         <td class="${(a.profit ?? -1) >= 0 ? "positive" : "negative"}">${a.profit === null ? "—" : signed(a.profit)}</td>
         <td>${a.pProfit === null ? "—" : percent.format(a.pProfit)}</td>
@@ -525,9 +527,8 @@ function resultContext(result) {
 }
 
 function scanContext(row) {
-  // Buy at the top of the range: just under each skin's float limit.
-  const inputs = row.inputs.map((i) => ({ ...i, float: Math.max(i.minFloat, i.minFloat + row.maxW * (i.maxFloat - i.minFloat) - 0.0001) }));
-  return { tier: calc.tier, stattrak: calc.stattrak, inputs, analysis: row.analysis, scan: row };
+  // Row inputs are already at the buy float (just under the limit) and priced at that wear's cheapest listing.
+  return { tier: calc.tier, stattrak: calc.stattrak, inputs: row.inputs, analysis: row.analysis, scan: row };
 }
 
 function openDetails(context) {

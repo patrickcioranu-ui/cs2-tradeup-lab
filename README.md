@@ -26,8 +26,9 @@ ROI or chance of profit.
   from the price used, a *Recalculated at cheapest listings* table shows the real cost, profit, ROI, chance and best
   case, with a button to open it in the calculator at those prices.
 - **Float scan:** under the calculator, every input-float range that changes the outcome, with the maximum float per
-  input skin, where the outputs land, and the EV / profit / chance for that range (using your cost column, so you can
-  type in the real price of low-float inputs).
+  input skin, where the outputs land, the input cost, and the EV / profit / chance for that range. Inputs that need a
+  different wear are priced at that wear's cheapest CSFloat listing (a minimum: low floats can cost more); your own
+  range uses exactly what you entered.
 - **Jackpot search:** a *Best case* column (profit if you hit the most valuable outcome, with its chance) and a
   *Biggest best case* sort, for long shots with big payouts; pair it with *Max profit chance*.
 - **Low-liquidity warning:** shown when an output has no CSFloat buy order, or its best buy order is below 70% of the
