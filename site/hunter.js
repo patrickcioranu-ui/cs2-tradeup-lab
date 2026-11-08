@@ -13,17 +13,43 @@ function phaseOdds(entry, finishEntries) {
   return (1 - GEM_PHASE_ODDS * gems) / regular;
 }
 
+// "\u2605 Karambit | Doppler" -> type "Karambit", finish "Doppler"; vanilla "\u2605 Karambit" -> finish "Vanilla".
+export function knifeType(entry) {
+  return entry.market_base_name.replace(/^\u2605 /, "").split(" | ")[0];
+}
+
+export function knifeFinish(entry) {
+  const parts = entry.market_base_name.split(" | ");
+  return parts.length > 1 ? parts.slice(1).join(" | ") : "Vanilla";
+}
+
+// Every knife type, then every glove type, each with its skins, from all case pools.
+export function knifeTypes(catalog) {
+  const types = new Map();
+  for (const pool of Object.values(catalog.special_pools || {})) {
+    for (const e of pool) {
+      const type = knifeType(e);
+      if (!types.has(type)) types.set(type, { type, kind: e.kind, finishes: new Set() });
+      types.get(type).finishes.add(knifeFinish(e));
+    }
+  }
+  const order = { knife: 0, glove: 1 };
+  return [...types.values()]
+    .map((t) => ({ type: t.type, kind: t.kind, finishes: [...t.finishes].sort() }))
+    .sort((a, b) => order[a.kind] - order[b.kind] || a.type.localeCompare(b.type));
+}
+
 function displayName(entry, stattrak) {
   return stattrak ? `★ StatTrak™ ${entry.market_base_name.slice(2)}` : entry.market_base_name;
 }
 
 export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
   const {
-    query = "", phase = null, minValue = null, wear = null, stattrak = false, maxBudget = null, limit = 50,
+    query = "", itemType = null, finish = null, phase = null, minValue = null, wear = null, stattrak = false, maxBudget = null, limit = 50,
     feeRate = 0.02, fixedFee = 0, floatMode = "worst", thinValuation = "buy_order",
   } = opts;
   const q = String(query || "").trim().toLowerCase();
-  if (!q && !phase && minValue === null) return [];
+  if (!q && !itemType && !finish && !phase && minValue === null) return [];
 
   // Per case: its finishes (phases grouped) and the entries that could be the target.
   const cases = new Map();
@@ -31,7 +57,12 @@ export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
     const pool = specialPool(catalog, name, stattrak);
     const finishes = new Map();
     for (const e of pool) (finishes.get(e.market_base_name) || finishes.set(e.market_base_name, []).get(e.market_base_name)).push(e);
-    const candidates = pool.filter((e) => (!q || e.market_base_name.toLowerCase().includes(q)) && (!phase || e.phase === phase) && !(wear && e.vanilla));
+    const candidates = pool.filter((e) =>
+      (!q || e.market_base_name.toLowerCase().includes(q))
+      && (!itemType || knifeType(e) === itemType)
+      && (!finish || knifeFinish(e) === finish)
+      && (!phase || e.phase === phase)
+      && !(wear && e.vanilla));
     cases.set(name, { finishes, finishCount: finishes.size, candidates });
   }
 

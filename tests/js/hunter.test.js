@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { findHunts } from "../../site/hunter.js";
+import { findHunts, knifeTypes } from "../../site/hunter.js";
 
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8"));
 const catalog = load("mini-catalog.json");
@@ -57,4 +57,29 @@ test("maxBudget, and the full trade-up analysis matches the finder's", () => {
 
 test("no query, phase or value means no target", () => {
   assert.equal(hunt({}).length, 0);
+});
+
+test("knifeTypes lists every knife then glove type with its skins", () => {
+  assert.deepEqual(knifeTypes(catalog), [
+    { type: "K-knife", kind: "knife", finishes: ["Doppler"] },
+    { type: "K-vanilla", kind: "knife", finishes: ["Vanilla"] },
+    { type: "G-gloves", kind: "glove", finishes: ["Vice"] },
+    { type: "H-wraps", kind: "glove", finishes: ["Cobalt"] },
+  ]);
+});
+
+test("itemType hunts any skin of that knife type; finish narrows to one skin", () => {
+  const anySkin = hunt({ itemType: "K-knife" });
+  close(anySkin[0].hitChance, 1 / 3);
+  assert.ok(anySkin[0].targets.every((t) => t.name.startsWith("★ K-knife |")));
+  close(hunt({ itemType: "K-knife", finish: "Doppler" })[0].hitChance, 1 / 3);
+  assert.equal(hunt({ itemType: "K-knife", finish: "Fade" }).length, 0);
+  close(hunt({ itemType: "K-vanilla" })[0].hitChance, 1 / 3);
+  assert.deepEqual(hunt({ itemType: "K-vanilla" })[0].targets.map((t) => t.name), ["★ K-vanilla"]);
+});
+
+test("itemType works for gloves, and a type alone counts as a target", () => {
+  const wraps = hunt({ itemType: "H-wraps" });
+  assert.equal(legKey(wraps[0]), "5xB-covert");
+  close(wraps[0].hitChance, 1);
 });

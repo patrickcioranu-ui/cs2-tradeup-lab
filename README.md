@@ -13,7 +13,8 @@ ROI or chance of profit.
 - **Calculator:** pick real collections and skins for the 10 inputs, set floats, and see every possible output with
   its float, wear, listing price, net after fees, expected value, profit chance and risk. Clicking a finder result loads
   it here.
-- **Knife Hunter tab:** pick a knife or gloves (name, optional Doppler phase, wear, minimum value, StatTrak) and see
+- **Knife Hunter tab:** pick a knife or gloves type (e.g. Karambit) and either Any skin or one skin, plus optional
+  Doppler phase, wear, minimum value and StatTrak, and see
   the 5-Covert trade-ups with the highest chance of hitting it, the cost per hit (input cost ÷ chance) and the full
   trade-up's EV and profit chance.
 - **Finder filters:** min/max profit chance, min profit, min ROI, min best case (€) and min jackpot (×), max budget, collection, tier (including

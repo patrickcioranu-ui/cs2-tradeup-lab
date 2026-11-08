@@ -2,6 +2,7 @@ import { WEARS, analyze, marketName, wearForFloat } from "./engine.js";
 import { loadData, priceLookup, priceSource } from "./data.js";
 import { contractSize, hasOutputs, outputPool } from "./finder.js";
 import { floatScan } from "./floatscan.js";
+import { knifeTypes } from "./hunter.js";
 import { buildDetails, detailsText } from "./details.js";
 
 const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert", "Knife/Gloves"];
@@ -119,7 +120,9 @@ function huntOptions() {
     return raw === "" || !Number.isFinite(value) ? null : value;
   };
   return {
-    query: $("#huntQuery").value,
+    query: "",
+    itemType: $("#huntType").value || null,
+    finish: $("#huntFinish").value || null,
     phase: $("#huntPhase").value || null,
     minValue: number("#huntMinValue"),
     wear: $("#huntWear").value || null,
@@ -132,6 +135,24 @@ function huntOptions() {
   };
 }
 
+let knifeTypeList = [];
+
+function fillKnifeTypes() {
+  knifeTypeList = knifeTypes(data.catalog);
+  const group = (kind, label) => `<optgroup label="${label}">${knifeTypeList
+    .filter((t) => t.kind === kind)
+    .map((t) => `<option value="${escapeHtml(t.type)}">${escapeHtml(t.type)}</option>`).join("")}</optgroup>`;
+  $("#huntType").innerHTML = `<option value="">Any type</option>${group("knife", "Knives")}${group("glove", "Gloves")}`;
+  fillKnifeFinishes();
+}
+
+function fillKnifeFinishes() {
+  const type = knifeTypeList.find((t) => t.type === $("#huntType").value);
+  $("#huntFinish").innerHTML = `<option value="">Any skin</option>${(type?.finishes || [])
+    .map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join("")}`;
+  $("#huntFinish").disabled = !type;
+}
+
 function showHuntMessage(text) {
   $("#huntMessage").textContent = text;
   $("#huntMessage").hidden = false;
@@ -141,8 +162,8 @@ function showHuntMessage(text) {
 function runHunt() {
   if (!data) return;
   const opts = huntOptions();
-  if (!opts.query.trim() && !opts.phase && opts.minValue === null) {
-    showHuntMessage("Choose a target: type a knife or gloves name, pick a phase, or set a minimum value.");
+  if (!opts.itemType && !opts.phase && opts.minValue === null) {
+    showHuntMessage("Choose a target: pick a knife or gloves type, a phase, or set a minimum value.");
     return;
   }
   if (huntWorker) huntWorker.terminate();
@@ -170,7 +191,7 @@ function runHunt() {
 function renderHuntResults(results) {
   lastHunts = results;
   if (!results.length) {
-    showHuntMessage("No trade-up can reach that target — check the spelling, or loosen the phase, wear, value or budget.");
+    showHuntMessage("No trade-up can reach that target. Try Any skin, or loosen the phase, wear, value or budget.");
     return;
   }
   $("#huntTableWrap").hidden = false;
@@ -612,13 +633,13 @@ async function copyDetails() {
 async function boot() {
   $("#findButton").addEventListener("click", runFinder);
   $("#huntButton").addEventListener("click", runHunt);
+  $("#huntType").addEventListener("change", fillKnifeFinishes);
   $("#floatScanTable").addEventListener("click", onScanActivate);
   $("#floatScanTable").addEventListener("keydown", onScanActivate);
   $("#detailsClose").addEventListener("click", () => $("#detailsDialog").close());
   $("#detailsDialog").addEventListener("click", (e) => { if (e.target === $("#detailsDialog")) $("#detailsDialog").close(); });
   $("#detailsCalc").addEventListener("click", detailsToCalculator);
   $("#detailsCopy").addEventListener("click", copyDetails);
-  $("#huntQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") runHunt(); });
   $("#huntResults").addEventListener("click", onHuntActivate);
   $("#huntResults").addEventListener("keydown", onHuntActivate);
   for (const tab of document.querySelectorAll(".tab")) tab.addEventListener("click", () => showTab(tab.dataset.tab));
@@ -647,8 +668,7 @@ async function boot() {
   if (Number.isFinite(feeRate)) $("#steamFee").value = String(+(feeRate * 100).toFixed(2));
   $("#findButton").disabled = false;
   $("#huntButton").disabled = false;
-  const knifeNames = [...new Set(Object.values(data.catalog.special_pools || {}).flat().map((e) => e.market_base_name.replace(/^★ /, "")))].sort();
-  $("#huntNames").innerHTML = knifeNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("");
+  fillKnifeTypes();
   renderCalculator();
 }
 

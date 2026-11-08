@@ -140,8 +140,12 @@
           </div>
           <p class="panel-description">Pick a target and see which 5-Covert trade-ups give you the best chance of getting it. Uses the Input float, thin-output and fee settings from the Finder tab.</p>
           <div class="controls-grid">
-            <label>Knife or gloves <input id="huntQuery" class="field text-field" type="search" list="huntNames" placeholder="e.g. Karambit, Doppler, Vice" /></label>
-            <datalist id="huntNames"></datalist>
+            <label>Knife or gloves type
+              <select id="huntType"><option value="">Any type</option></select>
+            </label>
+            <label>Skin
+              <select id="huntFinish" disabled><option value="">Any skin</option></select>
+            </label>
             <label>Phase
               <select id="huntPhase">
                 <option value="">Any</option>
