@@ -145,6 +145,8 @@ td:first-child { color: var(--ink); font-weight: 650; }
 .details-dialog .metric-value { margin-top: 10px; font-size: 22px; }
 .details-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 22px; }
 .details-dialog a { color: var(--blue); }
+.compare-table { min-width: 480px; }
+.details-section p.positive, .details-section p.negative { margin: 8px 0; font-weight: 700; }
 tr.best-outcome td { background: rgba(185, 244, 90, .07); }
 tr.worst-outcome td { background: rgba(255, 139, 139, .06); }
 tr.clickable-scan { cursor: pointer; }

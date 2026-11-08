@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildDetails, csfloatUrl, detailsText } from "../../site/details.js";
+import { buildDetails, csfloatUrl, detailsText, atCheapestListings } from "../../site/details.js";
 import { analyze, WEARS } from "../../site/engine.js";
 
 const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`);
@@ -52,4 +52,27 @@ test("detailsText is a plain summary with totals, shopping list and outcomes", (
   assert.match(text, /Cost: €68\.00/);
   assert.match(text, /9× AUG \| Syd Mead \(Field-Tested\), float ≤ 0\.3799, €7\.00 each/);
   assert.match(text, /★ Karambit/);
+});
+
+test("atCheapestListings reprices each input at its wear's cheapest listing and rescores", () => {
+  const listings = { "AUG | Syd Mead (Field-Tested)": 9, "Zeus x27 | Olympus (Minimal Wear)": 4 };
+  const real = atCheapestListings(details, (name) => listings[name]);
+  close(real.cost, 9 * 9 + 4);
+  close(real.costDelta, 85 - 68);
+  close(real.ev, analysis.ev);
+  close(real.profit, analysis.ev - 85);
+  close(real.roi, (analysis.ev - 85) / 85);
+  const nets = analysis.outcomes.map((o) => o.net);
+  close(real.pProfit, analysis.outcomes.filter((o) => o.net > 85).reduce((s, o) => s + o.probability, 0));
+  close(real.bestProfit, Math.max(...nets) - 85);
+  assert.equal(real.changed, true);
+  assert.deepEqual(real.missing, []);
+  assert.deepEqual(real.unitPrices, [9, 4]);
+});
+
+test("atCheapestListings keeps the used price when an item has no listing, and reports no change when equal", () => {
+  const partial = atCheapestListings(details, (name) => (name.startsWith("AUG") ? 7 : undefined));
+  close(partial.cost, 68);
+  assert.deepEqual(partial.missing, ["Zeus x27 | Olympus (Minimal Wear)"]);
+  assert.equal(partial.changed, false);
 });

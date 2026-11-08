@@ -3,7 +3,7 @@ import { loadData, priceLookup, priceSource } from "./data.js";
 import { contractSize, hasOutputs, outputPool } from "./finder.js";
 import { floatScan } from "./floatscan.js";
 import { knifeTypes } from "./hunter.js";
-import { buildDetails, detailsText } from "./details.js";
+import { atCheapestListings, buildDetails, detailsText } from "./details.js";
 
 const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert", "Knife/Gloves"];
 const WEAR_NAME = Object.fromEntries(WEARS.map((w) => [w.code, w.name]));
@@ -558,6 +558,7 @@ function openDetails(context) {
     </div>
     ${hunt}
     <p class="panel-description">${escapeHtml(assumptions)}</p>
+    ${realPriceSection(context, d)}
     <div class="details-section">
       <h3>Shopping list</h3>
       <div class="table-wrap"><table>
@@ -604,6 +605,60 @@ function cheapestCell(item) {
   return `${currency.format(quote.price)}${higher ? ' <span class="badge" title="The price used is below the cheapest listing for this wear: low-float or better-wear inputs cost more">more than used</span>' : ""}`;
 }
 
+function realPriceSection(context, d) {
+  const real = atCheapestListings(d, (name) => data.lookup(name)?.price);
+  context.real = real;
+  $("#detailsCalcReal").hidden = !real.changed;
+  if (!real.changed) return "";
+  const a = context.analysis;
+  const money = (v) => (v === null || v === undefined ? "—" : currency.format(v));
+  const sign = (v) => (v === null || v === undefined ? "—" : signed(v));
+  const pct = (v) => (v === null || v === undefined ? "—" : percent.format(v));
+  const delta = (used, now, fmt, betterWhenHigher = true) => {
+    if (used === null || now === null || used === undefined || now === undefined) return "";
+    const diff = now - used;
+    if (Math.abs(diff) < 0.0005) return "";
+    const good = betterWhenHigher ? diff > 0 : diff < 0;
+    return `<span class="${good ? "positive" : "negative"}">${diff > 0 ? "+" : "−"}${fmt(Math.abs(diff))}</span>`;
+  };
+  const rows = [
+    ["Input cost", money(a.cost), money(real.cost), delta(a.cost, real.cost, currency.format, false)],
+    ["Expected profit", sign(a.profit), sign(real.profit), delta(a.profit, real.profit, currency.format)],
+    ["ROI", pct(a.roi), pct(real.roi), delta(a.roi, real.roi, percent.format)],
+    ["Profit chance", pct(a.pProfit), pct(real.pProfit), delta(a.pProfit, real.pProfit, percent.format)],
+    ["Best case", sign(a.bestProfit), sign(real.bestProfit), delta(a.bestProfit, real.bestProfit, currency.format)],
+  ];
+  const verdict = real.profit === null ? "" : real.profit >= 0
+    ? `<p class="positive">Still profitable at real cheapest listings: ${signed(real.profit)} expected.</p>`
+    : `<p class="negative">Not profitable at real cheapest listings: ${signed(real.profit)} expected.</p>`;
+  const missing = real.missing.length
+    ? `<p class="panel-description">No listing found for ${real.missing.map(escapeHtml).join(", ")}; the price used was kept.</p>`
+    : "";
+  const floatNote = context.scan
+    ? "The cheapest listing in a wear can still be above the float limit you need, so treat this as the minimum cost; low-float listings can cost more."
+    : "Expected value is unchanged: only what you pay for the inputs changes.";
+  return `
+    <div class="details-section">
+      <h3>Recalculated at cheapest listings</h3>
+      <p class="panel-description">Each input repriced at the cheapest CSFloat listing for the wear it needs. ${floatNote}</p>
+      ${verdict}
+      <div class="table-wrap"><table class="compare-table">
+        <thead><tr><th></th><th>Price used</th><th>At cheapest listings</th><th>Change</th></tr></thead>
+        <tbody>${rows.map(([label, used, now, change]) => `<tr><td>${label}</td><td>${used}</td><td><strong>${now}</strong></td><td>${change}</td></tr>`).join("")}</tbody>
+      </table></div>
+      ${missing}
+    </div>`;
+}
+
+function detailsToCalculatorAtRealPrices() {
+  const c = detailsContext;
+  if (!c?.real || !c.details) return;
+  const priceFor = new Map(c.details.shopping.map((s, i) => [s.marketName, c.real.unitPrices[i]]));
+  const inputs = c.inputs.map((i) => ({ ...i, cost: priceFor.get(marketName(i.label, wearForFloat(i.float), c.stattrak)) ?? i.cost }));
+  $("#detailsDialog").close();
+  loadInputsIntoCalculator(c.tier, c.stattrak, inputs);
+}
+
 function onScanActivate(event) {
   const row = event.target.closest("tr[data-scan]");
   if (!row) return;
@@ -639,6 +694,7 @@ async function boot() {
   $("#detailsClose").addEventListener("click", () => $("#detailsDialog").close());
   $("#detailsDialog").addEventListener("click", (e) => { if (e.target === $("#detailsDialog")) $("#detailsDialog").close(); });
   $("#detailsCalc").addEventListener("click", detailsToCalculator);
+  $("#detailsCalcReal").addEventListener("click", detailsToCalculatorAtRealPrices);
   $("#detailsCopy").addEventListener("click", copyDetails);
   $("#huntResults").addEventListener("click", onHuntActivate);
   $("#huntResults").addEventListener("keydown", onHuntActivate);

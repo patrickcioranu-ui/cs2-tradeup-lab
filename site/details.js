@@ -63,3 +63,36 @@ export function detailsText(details) {
   ];
   return lines.join("\n");
 }
+
+// Re-cost the trade-up at the cheapest current listing for each input's wear (any float in that wear).
+// Outcomes are unchanged, so EV stays the same; cost, profit, ROI, chance and best case move.
+// `cheapest(marketName)` returns a price or undefined; unlisted items keep the price used.
+export function atCheapestListings(details, cheapest) {
+  const a = details.analysis;
+  const missing = [];
+  const unitPrices = details.shopping.map((s) => {
+    const price = cheapest(s.marketName);
+    if (!Number.isFinite(price)) {
+      missing.push(s.marketName);
+      return s.price;
+    }
+    return price;
+  });
+  const cost = details.shopping.reduce((sum, s, i) => sum + s.count * unitPrices[i], 0);
+  const nets = a.outcomes.map((o) => o.net);
+  const complete = a.ev !== null && nets.every((n) => n !== null);
+  const bestNet = complete ? Math.max(...nets) : null;
+  return {
+    unitPrices,
+    missing,
+    cost,
+    costDelta: a.cost === null ? null : cost - a.cost,
+    changed: a.cost === null || Math.abs(cost - a.cost) > 0.005,
+    ev: a.ev,
+    profit: complete ? a.ev - cost : null,
+    roi: complete && cost > 0 ? (a.ev - cost) / cost : null,
+    pProfit: complete ? a.outcomes.filter((o) => o.net > cost).reduce((s, o) => s + o.probability, 0) : null,
+    bestProfit: complete ? bestNet - cost : null,
+    jackpotMultiple: complete && cost > 0 ? bestNet / cost : null,
+  };
+}

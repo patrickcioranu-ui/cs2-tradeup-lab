@@ -22,7 +22,9 @@ ROI or chance of profit.
   trade-ups are shown anyway with a note.
 - **Trade-up details:** click any Finder, Knife Hunter or Float scan row for a popup with the summary, a shopping
   list (quantity, wear, max float, price used vs. cheapest listing, CSFloat search link), every outcome with its
-  float, wear, value and profit, plus Open in calculator and Copy as text.
+  float, wear, value and profit, plus Open in calculator and Copy as text. When an input's cheapest listing differs
+  from the price used, a *Recalculated at cheapest listings* table shows the real cost, profit, ROI, chance and best
+  case, with a button to open it in the calculator at those prices.
 - **Float scan:** under the calculator, every input-float range that changes the outcome, with the maximum float per
   input skin, where the outputs land, and the EV / profit / chance for that range (using your cost column, so you can
   type in the real price of low-float inputs).
