@@ -252,6 +252,25 @@
 
             <aside id="insightPanel" class="panel insight-panel"></aside>
           </div>
+
+          <div class="panel outcomes-panel float-scan" id="floatScanPanel">
+            <div class="panel-heading compact">
+              <div>
+                <span class="panel-kicker">FLOAT SCAN</span>
+                <h2>Which input floats would pay off?</h2>
+              </div>
+            </div>
+            <p class="panel-description">Each row is a float range where the outcomes stay the same. Buy inputs below the listed floats to land in that row. Uses the costs in your cost column: low-float listings usually cost more, so type in their real price to see the true profit.</p>
+            <div id="floatScanMessage" class="finder-message" hidden></div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Inputs need floats below</th><th>Outputs land as</th><th>EV</th><th>Profit</th><th>Profit chance</th><th></th></tr>
+                </thead>
+                <tbody id="floatScanTable"></tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <section class="method-section">

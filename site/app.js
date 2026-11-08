@@ -1,6 +1,7 @@
 import { WEARS, analyze, marketName, wearForFloat } from "./engine.js";
 import { loadData, priceLookup, priceSource } from "./data.js";
 import { contractSize, hasOutputs, outputPool } from "./finder.js";
+import { floatScan } from "./floatscan.js";
 
 const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert", "Knife/Gloves"];
 const WEAR_NAME = Object.fromEntries(WEARS.map((w) => [w.code, w.name]));
@@ -352,7 +353,7 @@ function outputsByCollection() {
 function calcInputs() {
   return calc.rows.map((row) => {
     const skin = findSkin(row);
-    return { collection: row.collection, float: row.float, minFloat: skin.min_float, maxFloat: skin.max_float, cost: row.cost };
+    return { collection: row.collection, label: skin.market_base_name, float: row.float, minFloat: skin.min_float, maxFloat: skin.max_float, cost: row.cost };
   });
 }
 
@@ -425,6 +426,7 @@ function renderCalculator() {
   const analysis = analyze({ inputs: calcInputs(), outputsByCollection: outputsByCollection(), ...fees(), thinValuation: $("#thinValuation").value });
   renderOutputs(analysis);
   renderAnalysis(analysis);
+  renderFloatScan();
 }
 
 function onInputChange(event) {
@@ -454,6 +456,35 @@ function onOverrideChange(event) {
   if (event.target.value === "" || !Number.isFinite(value) || value < 0) delete calc.overrides[key];
   else calc.overrides[key] = value;
   renderCalculator();
+}
+
+function renderFloatScan() {
+  const inputs = calcInputs();
+  if (inputs.some((i) => !Number.isFinite(i.cost))) {
+    $("#floatScanMessage").textContent = "Enter a cost for every input to scan floats.";
+    $("#floatScanMessage").hidden = false;
+    $("#floatScanTable").innerHTML = "";
+    return;
+  }
+  $("#floatScanMessage").hidden = true;
+  const rows = floatScan({ inputs, outputsByCollection: outputsByCollection(), ...fees(), thinValuation: $("#thinValuation").value });
+  $("#floatScanTable").innerHTML = rows.map((r) => {
+    const a = r.analysis;
+    const limits = r.maxW >= 1 - 1e-9 ? "any float" : r.limits.map((l) => `${l.label} < ${l.maxFloat.toFixed(4)}`).join("<br>");
+    const wears = {};
+    for (const o of a.outcomes) wears[o.wear] = (wears[o.wear] || 0) + 1;
+    const lands = WEARS.filter((w) => wears[w.code]).map((w) => `${wears[w.code]}× ${w.code}`).join(", ");
+    const tone = a.profit === null ? "" : a.profit >= 0 ? "scan-profit" : "";
+    return `
+      <tr class="${tone} ${r.current ? "scan-current" : ""}">
+        <td class="legs">${r.maxW >= 1 - 1e-9 ? "any float" : limits.split("<br>").map(escapeHtml).join("<br>")}</td>
+        <td>${lands}</td>
+        <td>${a.ev === null ? "missing price" : currency.format(a.ev)}</td>
+        <td class="${(a.profit ?? -1) >= 0 ? "positive" : "negative"}">${a.profit === null ? "—" : signed(a.profit)}</td>
+        <td>${a.pProfit === null ? "—" : percent.format(a.pProfit)}</td>
+        <td>${r.current ? '<span class="badge current-badge">your floats</span>' : ""}</td>
+      </tr>`;
+  }).join("");
 }
 
 // ---------- Boot ----------

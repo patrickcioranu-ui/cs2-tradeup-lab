@@ -19,6 +19,9 @@ ROI or chance of profit.
 - **Finder filters:** min/max profit chance, min profit, min ROI, min best case (€) and min jackpot (×), max budget, collection, tier (including
   Covert → Knife/Gloves), StatTrak, liquidity, and 50–500 results. If nothing meets the profit filters, the best
   trade-ups are shown anyway with a note.
+- **Float scan:** under the calculator, every input-float range that changes the outcome, with the maximum float per
+  input skin, where the outputs land, and the EV / profit / chance for that range (using your cost column, so you can
+  type in the real price of low-float inputs).
 - **Jackpot search:** a *Best case* column (profit if you hit the most valuable outcome, with its chance) and a
   *Biggest best case* sort, for long shots with big payouts; pair it with *Max profit chance*.
 - **Low-liquidity warning:** shown when an output has no CSFloat buy order, or its best buy order is below 70% of the
