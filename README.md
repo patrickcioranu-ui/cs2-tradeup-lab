@@ -19,6 +19,9 @@ ROI or chance of profit.
 - **Finder filters:** min/max profit chance, min profit, min ROI, min best case (€) and min jackpot (×), max budget, collection, tier (including
   Covert → Knife/Gloves), StatTrak, liquidity, and 50–500 results. If nothing meets the profit filters, the best
   trade-ups are shown anyway with a note.
+- **Trade-up details:** click any Finder, Knife Hunter or Float scan row for a popup with the summary, a shopping
+  list (quantity, wear, max float, price used vs. cheapest listing, CSFloat search link), every outcome with its
+  float, wear, value and profit, plus Open in calculator and Copy as text.
 - **Float scan:** under the calculator, every input-float range that changes the outcome, with the maximum float per
   input skin, where the outputs land, and the EV / profit / chance for that range (using your cost column, so you can
   type in the real price of low-float inputs).

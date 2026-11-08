@@ -2,6 +2,7 @@ import { WEARS, analyze, marketName, wearForFloat } from "./engine.js";
 import { loadData, priceLookup, priceSource } from "./data.js";
 import { contractSize, hasOutputs, outputPool } from "./finder.js";
 import { floatScan } from "./floatscan.js";
+import { buildDetails, detailsText } from "./details.js";
 
 const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert", "Knife/Gloves"];
 const WEAR_NAME = Object.fromEntries(WEARS.map((w) => [w.code, w.name]));
@@ -197,7 +198,7 @@ function onHuntActivate(event) {
   const row = event.target.closest("tr[data-hunt]");
   if (!row) return;
   if (event.type === "keydown" && event.key !== "Enter") return;
-  loadIntoCalculator(lastHunts[Number(row.dataset.hunt)]);
+  openDetails(resultContext(lastHunts[Number(row.dataset.hunt)]));
 }
 
 function showTab(name) {
@@ -250,7 +251,7 @@ function onResultActivate(event) {
   const row = event.target.closest("tr[data-result]");
   if (!row) return;
   if (event.type === "keydown" && event.key !== "Enter") return;
-  loadIntoCalculator(lastResults[Number(row.dataset.result)]);
+  openDetails(resultContext(lastResults[Number(row.dataset.result)]));
 }
 
 // ---------- Calculator ----------
@@ -297,13 +298,11 @@ function resetCalculator() {
   });
 }
 
-function loadIntoCalculator(result) {
-  calc.tier = result.tier;
-  calc.stattrak = result.stattrak;
+function loadInputsIntoCalculator(tier, stattrak, inputs) {
+  calc.tier = tier;
+  calc.stattrak = stattrak;
   calc.overrides = {};
-  calc.rows = result.legs.flatMap((l) =>
-    Array.from({ length: l.count }, () => ({ collection: l.option.collection, skinId: l.option.skin.id, float: l.option.float, cost: l.option.price })),
-  );
+  calc.rows = inputs.map((i) => ({ collection: i.collection, skinId: i.skinId, float: i.float, cost: i.cost }));
   $("#calcTier").value = String(calc.tier);
   $("#calcStattrak").checked = calc.stattrak;
   renderCalculator();
@@ -353,7 +352,7 @@ function outputsByCollection() {
 function calcInputs() {
   return calc.rows.map((row) => {
     const skin = findSkin(row);
-    return { collection: row.collection, label: skin.market_base_name, float: row.float, minFloat: skin.min_float, maxFloat: skin.max_float, cost: row.cost };
+    return { collection: row.collection, skinId: row.skinId, label: skin.market_base_name, float: row.float, minFloat: skin.min_float, maxFloat: skin.max_float, cost: row.cost };
   });
 }
 
@@ -468,7 +467,8 @@ function renderFloatScan() {
   }
   $("#floatScanMessage").hidden = true;
   const rows = floatScan({ inputs, outputsByCollection: outputsByCollection(), ...fees(), thinValuation: $("#thinValuation").value });
-  $("#floatScanTable").innerHTML = rows.map((r) => {
+  lastScanRows = rows;
+  $("#floatScanTable").innerHTML = rows.map((r, index) => {
     const a = r.analysis;
     const limits = r.maxW >= 1 - 1e-9 ? "any float" : r.limits.map((l) => `${l.label} < ${l.maxFloat.toFixed(4)}`).join("<br>");
     const wears = {};
@@ -476,7 +476,7 @@ function renderFloatScan() {
     const lands = WEARS.filter((w) => wears[w.code]).map((w) => `${wears[w.code]}× ${w.code}`).join(", ");
     const tone = a.profit === null ? "" : a.profit >= 0 ? "scan-profit" : "";
     return `
-      <tr class="${tone} ${r.current ? "scan-current" : ""}">
+      <tr class="clickable-scan ${tone} ${r.current ? "scan-current" : ""}" data-scan="${index}" tabindex="0" title="Show full details for this float range">
         <td class="legs">${r.maxW >= 1 - 1e-9 ? "any float" : limits.split("<br>").map(escapeHtml).join("<br>")}</td>
         <td>${lands}</td>
         <td>${a.ev === null ? "missing price" : currency.format(a.ev)}</td>
@@ -487,11 +487,137 @@ function renderFloatScan() {
   }).join("");
 }
 
+// ---------- Trade-up details popup ----------
+
+let lastScanRows = [];
+let detailsContext = null;
+
+function resultInputs(result) {
+  return result.legs.flatMap((l) => Array.from({ length: l.count }, () => ({
+    collection: l.option.collection, skinId: l.option.skin.id, label: l.option.skin.market_base_name,
+    float: l.option.float, minFloat: l.option.skin.min_float, maxFloat: l.option.skin.max_float, cost: l.option.price,
+  })));
+}
+
+function resultContext(result) {
+  return { tier: result.tier, stattrak: result.stattrak, inputs: resultInputs(result), analysis: result.analysis, hunt: result.hitChance ? result : null };
+}
+
+function scanContext(row) {
+  // Buy at the top of the range: just under each skin's float limit.
+  const inputs = row.inputs.map((i) => ({ ...i, float: Math.max(i.minFloat, i.minFloat + row.maxW * (i.maxFloat - i.minFloat) - 0.0001) }));
+  return { tier: calc.tier, stattrak: calc.stattrak, inputs, analysis: row.analysis, scan: row };
+}
+
+function openDetails(context) {
+  detailsContext = context;
+  const d = buildDetails({ inputs: context.inputs, analysis: context.analysis, stattrak: context.stattrak });
+  detailsContext.details = d;
+  const a = context.analysis;
+  const tierText = `${TIER_NAMES[context.tier]} → ${TIER_NAMES[context.tier + 1]}${context.stattrak ? " · StatTrak™" : ""}`;
+  $("#detailsKicker").textContent = context.scan ? "TRADE-UP DETAILS · FLOAT SCAN RANGE" : "TRADE-UP DETAILS";
+  $("#detailsTitle").textContent = tierText;
+  const opts = { floatMode: $("#floatMode").value, thinValuation: $("#thinValuation").value, ...fees() };
+  const floatText = context.scan ? "inputs bought just under the float limits below" : `input float "${opts.floatMode}" in each wear`;
+  const thinText = opts.thinValuation === "listing" ? "the listing (up to 2x the buy order)" : "the best buy order";
+  const feeText = `${(opts.feeRate * 100).toFixed(1)}%${opts.fixedFee ? ` + ${currency.format(opts.fixedFee)}` : ""}`;
+  const assumptions = `Assumptions: ${floatText}; thin outputs valued at ${thinText}; sale fee ${feeText}.`;
+  const fmt = (v, f) => (v === null || v === undefined ? "—" : f(v));
+  const hunt = context.hunt
+    ? `<p class="panel-description">Chance of your Knife Hunter target: <strong class="positive">${oneIn(context.hunt.hitChance)}</strong> · cost per hit ${currency.format(context.hunt.costPerHit)}</p>`
+    : "";
+  $("#detailsBody").innerHTML = `
+    <div class="metrics-grid">
+      ${metric("Input cost", fmt(a.cost, currency.format), `${context.inputs.length} items`)}
+      ${metric("Expected value", fmt(a.ev, currency.format), "after sale fees")}
+      ${metric("Expected profit", fmt(a.profit, signed), a.roi === null ? "" : `ROI ${percent.format(a.roi)}`, (a.profit ?? -1) >= 0)}
+      ${metric("Profit chance", fmt(a.pProfit, percent.format), "an outcome beats the cost")}
+      ${metric("Best case", fmt(a.bestProfit, signed), a.bestChance ? `${percent.format(a.bestChance)} chance` : "", (a.bestProfit ?? -1) >= 0)}
+      ${metric("Risk", fmt(a.risk, currency.format), "std. deviation of proceeds")}
+    </div>
+    ${hunt}
+    <p class="panel-description">${escapeHtml(assumptions)}</p>
+    <div class="details-section">
+      <h3>Shopping list</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Qty</th><th>Item</th><th>Wear</th><th>Float ≤</th><th>Price used</th><th>Cheapest listing</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody>${d.shopping.map((s) => `
+          <tr>
+            <td>${s.count}×</td>
+            <td>${escapeHtml(s.marketName)}<br><span class="panel-description">${escapeHtml(s.collection)}</span></td>
+            <td>${WEAR_NAME[s.wear]}</td>
+            <td>${s.maxFloat.toFixed(4)}</td>
+            <td>${Number.isFinite(s.price) ? currency.format(s.price) : "—"}</td>
+            <td>${cheapestCell(s)}</td>
+            <td>${s.subtotal === null ? "—" : currency.format(s.subtotal)}</td>
+            <td><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">Find on CSFloat ↗</a></td>
+          </tr>`).join("")}</tbody>
+      </table></div>
+    </div>
+    <div class="details-section">
+      <h3>Every possible outcome</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Chance</th><th>Outcome</th><th>Float</th><th>Wear</th><th>Sale value</th><th>After fees</th><th>Profit / loss</th><th></th></tr></thead>
+        <tbody>${d.outcomes.map((o) => `
+          <tr class="${o.best ? "best-outcome" : o.worst ? "worst-outcome" : ""}">
+            <td class="probability">${percent.format(o.probability)}</td>
+            <td>${escapeHtml(o.name)}${o.best ? ' <span class="badge current-badge">best</span>' : o.worst ? ' <span class="badge">worst</span>' : ""}${o.thin ? ' <span class="badge" title="No buy order near the listing price">thin market</span>' : ""}<br><span class="panel-description">${escapeHtml(o.collection)}</span></td>
+            <td>${o.float.toFixed(4)}</td>
+            <td>${WEAR_NAME[o.wear]}</td>
+            <td>${o.value === null ? "no price" : currency.format(o.value)}</td>
+            <td>${o.net === null ? "—" : currency.format(o.net)}</td>
+            <td class="${(o.profit ?? -1) >= 0 ? "positive" : "negative"}">${o.profit === null ? "—" : signed(o.profit)}</td>
+            <td><a href="${escapeHtml(o.url)}" target="_blank" rel="noopener noreferrer">CSFloat ↗</a></td>
+          </tr>`).join("")}</tbody>
+      </table></div>
+    </div>`;
+  $("#detailsCopied").hidden = true;
+  $("#detailsDialog").showModal();
+}
+
+// Real cheapest listing at this wear (any float), to compare with the price used.
+function cheapestCell(item) {
+  const quote = data.lookup(item.marketName);
+  if (!quote) return '<span class="negative">none listed</span>';
+  const higher = Number.isFinite(item.price) && quote.price > item.price + 0.005;
+  return `${currency.format(quote.price)}${higher ? ' <span class="badge" title="The price used is below the cheapest listing for this wear: low-float or better-wear inputs cost more">more than used</span>' : ""}`;
+}
+
+function onScanActivate(event) {
+  const row = event.target.closest("tr[data-scan]");
+  if (!row) return;
+  if (event.type === "keydown" && event.key !== "Enter") return;
+  openDetails(scanContext(lastScanRows[Number(row.dataset.scan)]));
+}
+
+function detailsToCalculator() {
+  const c = detailsContext;
+  $("#detailsDialog").close();
+  if (c) loadInputsIntoCalculator(c.tier, c.stattrak, c.inputs);
+}
+
+async function copyDetails() {
+  if (!detailsContext?.details) return;
+  try {
+    await navigator.clipboard.writeText(detailsText(detailsContext.details));
+    $("#detailsCopied").textContent = "Copied!";
+  } catch {
+    $("#detailsCopied").textContent = "Could not copy automatically. Select the text and copy it manually.";
+  }
+  $("#detailsCopied").hidden = false;
+}
+
 // ---------- Boot ----------
 
 async function boot() {
   $("#findButton").addEventListener("click", runFinder);
   $("#huntButton").addEventListener("click", runHunt);
+  $("#floatScanTable").addEventListener("click", onScanActivate);
+  $("#floatScanTable").addEventListener("keydown", onScanActivate);
+  $("#detailsClose").addEventListener("click", () => $("#detailsDialog").close());
+  $("#detailsDialog").addEventListener("click", (e) => { if (e.target === $("#detailsDialog")) $("#detailsDialog").close(); });
+  $("#detailsCalc").addEventListener("click", detailsToCalculator);
+  $("#detailsCopy").addEventListener("click", copyDetails);
   $("#huntQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") runHunt(); });
   $("#huntResults").addEventListener("click", onHuntActivate);
   $("#huntResults").addEventListener("keydown", onHuntActivate);

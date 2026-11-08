@@ -127,7 +127,7 @@
               <tbody id="finderResults"></tbody>
             </table>
           </div>
-          <p class="panel-description">Click a row to open it in the calculator below.</p>
+          <p class="panel-description">Click a row for the full trade-up details (shopping list, every outcome, CSFloat links).</p>
         </section>
 
         <section class="panel finder-panel" id="hunter" aria-label="Knife hunter" hidden>
@@ -176,7 +176,7 @@
               <tbody id="huntResults"></tbody>
             </table>
           </div>
-          <p class="panel-description">Chance of target counts only the knives/gloves you chose; EV and profit include every possible outcome. Click a row to open it in the calculator.</p>
+          <p class="panel-description">Chance of target counts only the knives/gloves you chose; EV and profit include every possible outcome. Click a row for the full trade-up details.</p>
         </section>
 
         <section class="workspace-grid calculator" id="calculator" aria-label="Trade-up calculator">
@@ -260,7 +260,7 @@
                 <h2>Which input floats would pay off?</h2>
               </div>
             </div>
-            <p class="panel-description">Each row is a float range where the outcomes stay the same. Buy inputs below the listed floats to land in that row. Uses the costs in your cost column: low-float listings usually cost more, so type in their real price to see the true profit.</p>
+            <p class="panel-description">Each row is a float range where the outcomes stay the same. Buy inputs below the listed floats to land in that row. Uses the costs in your cost column: low-float listings usually cost more, so type in their real price to see the true profit. Click a row for its full details.</p>
             <div id="floatScanMessage" class="finder-message" hidden></div>
             <div class="table-wrap">
               <table>
@@ -297,6 +297,21 @@
         <span>Not affiliated with Valve, Steam or CSFloat</span>
       </footer>
     </div>
+    <dialog id="detailsDialog" class="details-dialog" aria-labelledby="detailsTitle">
+      <div class="details-head">
+        <div>
+          <span class="panel-kicker" id="detailsKicker">TRADE-UP DETAILS</span>
+          <h2 id="detailsTitle">Trade-up</h2>
+        </div>
+        <button id="detailsClose" class="details-close" type="button" aria-label="Close details">✕</button>
+      </div>
+      <div id="detailsBody"></div>
+      <div class="details-actions">
+        <button id="detailsCalc" class="primary-button" type="button"><span>Open in calculator</span><span class="button-arrow">↗</span></button>
+        <button id="detailsCopy" class="tab" type="button">Copy as text</button>
+        <span id="detailsCopied" class="panel-description" hidden>Copied!</span>
+      </div>
+    </dialog>
     <script type="module" src="app.js"></script>
   </body>
 </html>

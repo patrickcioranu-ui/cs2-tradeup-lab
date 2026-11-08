@@ -43,6 +43,7 @@ export function floatScan({ inputs, outputsByCollection, feeRate = 0, fixedFee =
       maxW,
       current: currentW >= minW - 1e-12 && (last ? currentW <= maxW + 1e-12 : currentW < maxW - 1e-12),
       limits: [...skins.values()].map((i) => ({ label: i.label, maxFloat: i.minFloat + maxW * (i.maxFloat - i.minFloat) })),
+      inputs: scanned,
       analysis: analyze({ inputs: scanned, outputsByCollection: used, feeRate, fixedFee, thinValuation }),
     });
   }

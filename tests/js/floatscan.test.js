@@ -46,3 +46,10 @@ test("rows with a missing output price are kept but incomplete", () => {
   assert.equal(rows[1].analysis.complete, false);
   assert.equal(rows[1].analysis.profit, null);
 });
+
+test("each row carries the inputs at that range's float, for the details view", () => {
+  const [first] = scan(inputsAt(0.2));
+  assert.equal(first.inputs.length, 10);
+  close(first.inputs[0].float, 0.035);
+  assert.equal(first.inputs[0].label, "In");
+});
