@@ -37,8 +37,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build catalog and Steam price data
+      - name: Build skin catalog and CSFloat price data
         run: python scripts/update_data.py
+
+      - name: Version-stamp assets so browsers never mix old and new files
+        run: python scripts/stamp_assets.py site "${GITHUB_SHA::7}-${GITHUB_RUN_ID}"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
