@@ -55,3 +55,42 @@ class CsfloatParseTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CsfloatLiveTests(unittest.TestCase):
+    def test_price_list_uses_min_price_cents_and_quantity(self):
+        from cs2_tradeup.csfloat_prices import parse_price_list
+        rows = [
+            {"market_hash_name": "AK-47 | Redline (Field-Tested)", "quantity": 3749, "min_price": 2386},
+            {"market_hash_name": "Gone (Factory New)", "quantity": 0, "min_price": 500},
+            {"market_hash_name": "Free (Factory New)", "quantity": 3, "min_price": 0},
+        ]
+        prices = parse_price_list(rows, 0.5, SEEN)
+        self.assertEqual(prices, {"AK-47 | Redline (Field-Tested)": {"price": 11.93, "listings": 3749, "seen_at": SEEN}})
+
+    def test_csfloat_eur_rate(self):
+        from cs2_tradeup.csfloat_prices import parse_exchange_rates
+        self.assertEqual(parse_exchange_rates({"data": {"usd": 1, "eur": 0.897375}}), 0.897375)
+        with self.assertRaises(ValueError):
+            parse_exchange_rates({"data": {}})
+
+    def test_combine_takes_live_prices_and_counts_with_dump_buy_orders_and_phases(self):
+        from cs2_tradeup.csfloat_prices import combine_prices
+        live = {
+            "AK-47 | Redline (Field-Tested)": {"price": 21.4, "listings": 3749, "seen_at": SEEN},
+            "Thin (Well-Worn)": {"price": 10.0, "listings": 2, "seen_at": SEEN},
+            "No Orders (Battle-Scarred)": {"price": 3.0, "listings": 40, "seen_at": SEEN},
+        }
+        dump = {
+            "AK-47 | Redline (Field-Tested)": {"price": 21.0, "buy_order": 20.9, "thin": False, "listings": None, "seen_at": SEEN},
+            "Thin (Well-Worn)": {"price": 7.0, "buy_order": 5.0, "thin": False, "listings": None, "seen_at": SEEN},
+            "Stale Only In Dump (Factory New)": {"price": 9.0, "buy_order": 8.0, "thin": False, "listings": None, "seen_at": SEEN},
+            "★ Karambit | Doppler (Factory New) [Ruby]": {"price": 5800.0, "buy_order": 5200.0, "thin": False, "listings": None, "seen_at": SEEN},
+        }
+        out = combine_prices(live, dump)
+        self.assertEqual(out["AK-47 | Redline (Field-Tested)"], {"price": 21.4, "buy_order": 20.9, "thin": False, "listings": 3749, "seen_at": SEEN})
+        self.assertTrue(out["Thin (Well-Worn)"]["thin"])  # buy order 5 < 70% of live 10
+        self.assertEqual(out["No Orders (Battle-Scarred)"]["buy_order"], None)
+        self.assertTrue(out["No Orders (Battle-Scarred)"]["thin"])
+        self.assertNotIn("Stale Only In Dump (Factory New)", out)  # not listed on CSFloat now
+        self.assertEqual(out["★ Karambit | Doppler (Factory New) [Ruby]"]["price"], 5800.0)  # phases from the dump

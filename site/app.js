@@ -210,7 +210,7 @@ function renderHuntResults(results) {
         <td class="${(a.profit ?? 0) >= 0 ? "positive" : "negative"}">${a.profit === null ? "—" : signed(a.profit)}</td>
         <td>${a.pProfit === null ? "—" : percent.format(a.pProfit)}</td>
         <td class="targets">${escapeHtml(landsText)}</td>
-        <td>${r.lowLiquidity ? '<span class="badge" title="At least one output has no CSFloat buy order near its listing price">low liquidity</span>' : ""}</td>
+        <td>${r.lowLiquidity ? '<span class="badge" title="An input or output has fewer than 5 CSFloat listings, or an output has no buy order near its listing price">low liquidity</span>' : ""}</td>
       </tr>`;
   }).join("");
 }
@@ -263,7 +263,7 @@ function renderFinderResults(results) {
         <td>${a.roi === null ? "—" : percent.format(a.roi)}</td>
         <td class="probability">${percent.format(a.pProfit)}</td>
         <td class="${a.bestProfit >= 0 ? "positive" : "negative"}" title="${a.jackpotMultiple === null ? "" : `${a.jackpotMultiple.toFixed(1)}× your inputs`}">${signed(a.bestProfit)} (${percent.format(a.bestChance)})</td>
-        <td>${r.lowLiquidity ? '<span class="badge" title="At least one output has no CSFloat buy order near its listing price">low liquidity</span>' : ""}</td>
+        <td>${r.lowLiquidity ? '<span class="badge" title="An input or output has fewer than 5 CSFloat listings, or an output has no buy order near its listing price">low liquidity</span>' : ""}</td>
       </tr>`;
   }).join("");
 }
@@ -584,7 +584,7 @@ function openDetails(context) {
         <tbody>${d.outcomes.map((o) => `
           <tr class="${o.best ? "best-outcome" : o.worst ? "worst-outcome" : ""}">
             <td class="probability">${percent.format(o.probability)}</td>
-            <td>${escapeHtml(o.name)}${o.best ? ' <span class="badge current-badge">best</span>' : o.worst ? ' <span class="badge">worst</span>' : ""}${o.thin ? ' <span class="badge" title="No buy order near the listing price">thin market</span>' : ""}<br><span class="panel-description">${escapeHtml(o.collection)}</span></td>
+            <td>${escapeHtml(o.name)}${o.best ? ' <span class="badge current-badge">best</span>' : o.worst ? ' <span class="badge">worst</span>' : ""}${o.thin ? ' <span class="badge" title="No buy order near the listing price">thin market</span>' : ""}<br><span class="panel-description">${escapeHtml(o.collection)}${Number.isFinite(o.listings) ? ` · ${listedText(o.listings)}` : ""}</span></td>
             <td>${o.float.toFixed(4)}</td>
             <td>${WEAR_NAME[o.wear]}</td>
             <td>${o.value === null ? "no price" : currency.format(o.value)}</td>
@@ -598,12 +598,17 @@ function openDetails(context) {
   $("#detailsDialog").showModal();
 }
 
+function listedText(n) {
+  return `${n.toLocaleString("en-GB")} listed${n < 5 ? " · thin" : ""}`;
+}
+
 // Real cheapest listing at this wear (any float), to compare with the price used.
 function cheapestCell(item) {
   const quote = data.lookup(item.marketName);
   if (!quote) return '<span class="negative">none listed</span>';
   const higher = Number.isFinite(item.price) && quote.price > item.price + 0.005;
-  return `${currency.format(quote.price)}${higher ? ' <span class="badge" title="The price used is below the cheapest listing for this wear: low-float or better-wear inputs cost more">more than used</span>' : ""}`;
+  const count = Number.isFinite(quote.listings) ? `<br><span class="panel-description">${listedText(quote.listings)}</span>` : "";
+  return `${currency.format(quote.price)}${higher ? ' <span class="badge" title="The price used is below the cheapest listing for this wear: low-float or better-wear inputs cost more">more than used</span>' : ""}${count}`;
 }
 
 function realPriceSection(context, d) {

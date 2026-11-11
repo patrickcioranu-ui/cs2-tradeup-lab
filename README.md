@@ -31,8 +31,8 @@ ROI or chance of profit.
   range uses exactly what you entered.
 - **Jackpot search:** a *Best case* column (profit if you hit the most valuable outcome, with its chance) and a
   *Biggest best case* sort, for long shots with big payouts; pair it with *Max profit chance*.
-- **Low-liquidity warning:** shown when an output has no CSFloat buy order, or its best buy order is below 70% of the
-  lowest listing (a thin market where selling near the listing price is unlikely).
+- **Low-liquidity warning:** shown when any input or output has fewer than 5 CSFloat listings, or an output has no
+  buy order or a best buy order below 70% of its lowest listing (selling near the listing price is unlikely).
 
 ## Model and assumptions
 
@@ -42,9 +42,9 @@ ROI or chance of profit.
 - **Probabilities:** a collection's chance = its share of the 10 inputs; outputs within a collection are equally likely.
 - **Input cost:** the price of the wear you buy, assuming you get the *worst* float inside that wear, so results are
   conservative.
-- **Prices:** the lowest current CSFloat listing for each skin and wear, from the public
-  [prices.csgotrader.app](https://prices.csgotrader.app/latest/csfloat.json) CSFloat dump, converted from USD to EUR
-  with the ECB daily rate. Inputs and outputs both use the listing price. Skins with no listing have no price, and any
+- **Prices:** the lowest current CSFloat listing and the number of listings for each skin and wear, live from
+  CSFloat's public price list, converted from USD to EUR at CSFloat's own rate. Best buy orders and Doppler phase
+  prices come from the [prices.csgotrader.app](https://prices.csgotrader.app/latest/csfloat.json) copy of CSFloat. Inputs and outputs both use the listing price. Skins with no listing have no price, and any
   trade-up that needs one is skipped. Listings are not guaranteed sale prices.
 - **Exit:** selling on CSFloat, 2% sale fee by default (adjustable).
   Earlier versions used Steam Market median sale prices, which were badly off for many skins.
@@ -62,7 +62,7 @@ ROI or chance of profit.
 
 `site/data/catalog.json` (skins, from the open-source [ByMykel CSGO-API](https://github.com/ByMykel/CSGO-API)) and
 `site/data/prices.json` are **not committed**. The **Deploy TradeUp Lab to GitHub Pages** workflow builds them fresh
-and publishes them with the site on every push to `main`, daily at 06:00 UTC, and on demand. If a data build fails, that
+and publishes them with the site on every push to `main`, every hour, and on demand. If a data build fails, that
 deploy is skipped and the previous live site keeps its last good data.
 
 To refresh now: **Actions → Deploy TradeUp Lab to GitHub Pages → Run workflow**.

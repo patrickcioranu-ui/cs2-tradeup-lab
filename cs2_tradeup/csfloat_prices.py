@@ -49,3 +49,49 @@ def _entry(listing: float, order: float | None, fx: float, seen_at: str) -> dict
         "listings": None,
         "seen_at": seen_at,
     }
+
+
+# CSFloat's own live data (no login needed): every item's lowest listing in USD cents and listing count.
+PRICE_LIST_URL = "https://csfloat.com/api/v1/listings/price-list"
+RATES_URL = "https://csfloat.com/api/v1/meta/exchange-rates"
+
+
+def parse_price_list(rows: list[dict], fx: float, seen_at: str) -> dict[str, dict]:
+    """Map market name -> {price (EUR), listings, seen_at}; skips items with nothing listed. ``fx`` is EUR per USD."""
+    prices = {}
+    for row in rows:
+        cents, quantity = row.get("min_price"), row.get("quantity")
+        if not cents or not quantity:
+            continue
+        prices[row["market_hash_name"]] = {"price": round(cents / 100 * fx, 2), "listings": quantity, "seen_at": seen_at}
+    return prices
+
+
+def parse_exchange_rates(payload: dict) -> float:
+    """CSFloat's own EUR per USD rate, so euro prices match what CSFloat shows."""
+    rate = (payload.get("data") or {}).get("eur")
+    if not isinstance(rate, (int, float)) or rate <= 0:
+        raise ValueError("EUR rate missing from CSFloat exchange rates")
+    return float(rate)
+
+
+def combine_prices(live: dict[str, dict], dump: dict[str, dict]) -> dict[str, dict]:
+    """Live CSFloat prices and listing counts, plus buy orders and Doppler phase prices from the dump.
+
+    Items not listed on CSFloat right now are dropped (the dump can lag); phase entries
+    ("<name> [<phase>]") only exist in the dump and are kept as they are.
+    """
+    combined = {}
+    for name, entry in live.items():
+        order = (dump.get(name) or {}).get("buy_order")
+        combined[name] = {
+            "price": entry["price"],
+            "buy_order": order,
+            "thin": order is None or order < THIN_SPREAD * entry["price"],
+            "listings": entry["listings"],
+            "seen_at": entry["seen_at"],
+        }
+    for name, entry in dump.items():
+        if name.endswith("]") and " [" in name:
+            combined[name] = entry
+    return combined

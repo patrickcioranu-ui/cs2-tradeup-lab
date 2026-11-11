@@ -1,7 +1,8 @@
 """Refresh site/data/catalog.json and site/data/prices.json.
 
 Run from the repository root: ``python scripts/update_data.py``.
-Prices are CSFloat lowest listings from the prices.csgotrader.app dump (one download).
+Prices are CSFloat's live lowest listings and listing counts (its public price list), with buy orders and
+Doppler phase prices from the prices.csgotrader.app copy of CSFloat.
 """
 
 from __future__ import annotations
@@ -16,7 +17,17 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from cs2_tradeup.catalog import CRATES_URL, SKINS_URL, build_catalog  # noqa: E402
-from cs2_tradeup.csfloat_prices import CSFLOAT_FEE_RATE, CSFLOAT_URL, CSFLOAT_VIA, parse_csfloat  # noqa: E402
+from cs2_tradeup.csfloat_prices import (  # noqa: E402
+    CSFLOAT_FEE_RATE,
+    CSFLOAT_URL,
+    CSFLOAT_VIA,
+    PRICE_LIST_URL,
+    RATES_URL,
+    combine_prices,
+    parse_csfloat,
+    parse_exchange_rates,
+    parse_price_list,
+)
 from cs2_tradeup.steam_prices import fetch_ecb_usd_per_eur, http_get_text, merge_prices  # noqa: E402
 
 ISO = "%Y-%m-%dT%H:%M:%SZ"
@@ -63,9 +74,27 @@ def main() -> int:
         return build_catalog(json.loads(http_get_text(SKINS_URL)), seen_at, raw_crates=json.loads(http_get_text(CRATES_URL)))
 
     def fetch_prices() -> tuple:
-        usd_per_eur = fetch_ecb_usd_per_eur(http_get_text)
-        prices = parse_csfloat(json.loads(http_get_text(CSFLOAT_URL)), 1 / usd_per_eur, seen_at)
-        return prices, bool(prices), usd_per_eur
+        # Euro rate: CSFloat's own (matches its site); ECB as a fallback.
+        try:
+            fx = parse_exchange_rates(json.loads(http_get_text(RATES_URL)))
+        except Exception as err:
+            print(f"CSFloat exchange rate unavailable, using ECB: {err}", file=sys.stderr)
+            fx = 1 / fetch_ecb_usd_per_eur(http_get_text)
+        # Buy orders and Doppler phase prices come from the csgotrader copy of CSFloat.
+        try:
+            dump = parse_csfloat(json.loads(http_get_text(CSFLOAT_URL)), fx, seen_at)
+        except Exception as err:
+            print(f"csgotrader CSFloat dump unavailable: {err}", file=sys.stderr)
+            dump = {}
+        # Lowest listings and listing counts come live from CSFloat itself.
+        try:
+            live = parse_price_list(json.loads(http_get_text(PRICE_LIST_URL)), fx, seen_at)
+        except Exception as err:
+            print(f"CSFloat price list unavailable, using the dump only: {err}", file=sys.stderr)
+            live = {}
+        prices = combine_prices(live, dump) if live else dump
+        print(f"live CSFloat listings: {len(live)}, dump entries: {len(dump)}")
+        return prices, bool(prices), 1 / fx
 
     return run(ROOT / "site" / "data", fetch_catalog, fetch_prices, now)
 

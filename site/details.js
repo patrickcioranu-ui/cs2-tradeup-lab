@@ -37,7 +37,7 @@ export function buildDetails({ inputs, analysis, stattrak = false }) {
       const name = outcomeMarketName(o.name, o.wear);
       return {
         name: o.name, marketName: name, collection: o.collection, probability: o.probability, float: o.float, wear: o.wear,
-        value: o.gross, net: o.net, profit: o.net === null || cost === null ? null : o.net - cost, thin: o.thin, url: csfloatUrl(name),
+        value: o.gross, net: o.net, profit: o.net === null || cost === null ? null : o.net - cost, thin: o.thin, listings: o.listings, url: csfloatUrl(name),
       };
     })
     .sort((a, b) => (b.net ?? -Infinity) - (a.net ?? -Infinity));

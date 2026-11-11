@@ -176,3 +176,15 @@ test("minBestProfit and minJackpot filter by the size of the best case", () => {
   assert.ok(keys.includes("1xB-cheap:FN+9xA-cheap:MW")); // 50 / 11 = 4.55x
   assert.ok(!keys.includes("2xB-cheap:FN+8xA-cheap:MW")); // 50 / 12 = 4.17x
 });
+
+test("low liquidity uses real listing counts: any input or output with fewer than 5 listed", () => {
+  const withCounts = (counts) => (name) => {
+    const q = lookup(name);
+    return q && name in counts ? { ...q, listings: counts[name] } : q;
+  };
+  const best = (counts) => findTradeUps(catalog, withCounts(counts), base).find((r) => legKey(r) === "10xA-cheap:MW");
+  assert.equal(best({}).lowLiquidity, false);
+  assert.equal(best({ "A-cheap (Minimal Wear)": 3 }).lowLiquidity, true); // thin input
+  assert.equal(best({ "A-out2 (Minimal Wear)": 4 }).lowLiquidity, true); // thin output
+  assert.equal(best({ "A-out2 (Minimal Wear)": 8 }).lowLiquidity, false); // 8 listed is enough
+});

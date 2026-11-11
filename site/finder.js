@@ -1,7 +1,13 @@
 // Automatic trade-up search (spec §5). Pure functions: runs in a Web Worker or in Node tests.
 import { WEARS, analyze, marketName, normalizeFloat } from "./engine.js";
 
-const LOW_LIQUIDITY = 10;
+// Thin market: an output with no buy order near its listing, or any input/output with fewer than 5 listed.
+export const LOW_LIQUIDITY = 5;
+
+export function isLowLiquidity(analysis, legs) {
+  const thinInput = legs.some((l) => Number.isFinite(l.option.listings) && l.option.listings < LOW_LIQUIDITY);
+  return analysis.illiquid || thinInput || (analysis.minListings !== null && analysis.minListings < LOW_LIQUIDITY);
+}
 // Tier 5 = Covert -> knife/gloves (5-input contract, Oct 2025). Tiers 0-4 use 10 inputs.
 export const KNIFE_TIER = 5;
 export const contractSize = (tier) => (tier === KNIFE_TIER ? 5 : 10);
@@ -179,7 +185,7 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
     if (minRoi !== null && (analysis.roi === null || analysis.roi < minRoi - 1e-12)) return;
     if (minBestProfit !== null && analysis.bestProfit < minBestProfit - 1e-9) return;
     if (minJackpot !== null && (analysis.jackpotMultiple === null || analysis.jackpotMultiple < minJackpot - 1e-12)) return;
-    const lowLiquidity = analysis.illiquid || (analysis.minListings !== null && analysis.minListings < LOW_LIQUIDITY);
+    const lowLiquidity = isLowLiquidity(analysis, legs);
     if (hideLowLiquidity && lowLiquidity) return;
     kept.push({ tier, stattrak: st, legs, analysis, lowLiquidity });
     if (kept.length > limit * 20) kept = kept.sort(compare).slice(0, limit);

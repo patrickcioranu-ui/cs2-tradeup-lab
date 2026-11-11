@@ -76,3 +76,13 @@ test("atCheapestListings keeps the used price when an item has no listing, and r
   assert.deepEqual(partial.missing, ["Zeus x27 | Olympus (Minimal Wear)"]);
   assert.equal(partial.changed, false);
 });
+
+test("outcomes carry their listing counts for the popup", () => {
+  const counted = analyze({
+    inputs,
+    outputsByCollection: { A: [{ name: "AK-47 | Big", minFloat: 0, maxFloat: 1, prices: Object.fromEntries(WEARS.map((w) => [w.code, { price: 200, listings: 7 }])) }], B: outputsByCollection.B },
+    feeRate: 0.02,
+  });
+  const d = buildDetails({ inputs, analysis: counted });
+  assert.equal(d.outcomes.find((o) => o.name === "AK-47 | Big").listings, 7);
+});

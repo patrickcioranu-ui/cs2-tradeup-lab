@@ -2,14 +2,14 @@ name: Deploy TradeUp Lab to GitHub Pages
 
 # Builds fresh skin + price data and publishes site/ to Pages.
 # Data is never committed: each run fetches it and ships it inside the Pages
-# artifact (daily at 06:00 UTC). If the data refresh fails, the deploy is skipped and the previous
+# artifact (every hour). If the data refresh fails, the deploy is skipped and the previous
 # live site (with its last good data) stays up.
 
 on:
   push:
     branches: ["main"]
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "7 * * * *"
   workflow_dispatch:
 
 permissions:
