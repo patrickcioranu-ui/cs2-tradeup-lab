@@ -53,6 +53,8 @@ def _entry(listing: float, order: float | None, fx: float, seen_at: str) -> dict
 
 # CSFloat's own live data (no login needed): every item's lowest listing in USD cents and listing count.
 PRICE_LIST_URL = "https://csfloat.com/api/v1/listings/price-list"
+MIN_LISTINGS = 5  # fewer listings than this = thin market
+JUNK_ORDER = 0.05  # buy orders under 5% of the listing are ignored
 RATES_URL = "https://csfloat.com/api/v1/meta/exchange-rates"
 
 
@@ -84,10 +86,13 @@ def combine_prices(live: dict[str, dict], dump: dict[str, dict]) -> dict[str, di
     combined = {}
     for name, entry in live.items():
         order = (dump.get(name) or {}).get("buy_order")
+        if order is not None and order < JUNK_ORDER * entry["price"]:
+            order = None  # a lowball (e.g. EUR 0.01 on a EUR 150 item) says nothing about the real price
         combined[name] = {
             "price": entry["price"],
             "buy_order": order,
-            "thin": order is None or order < THIN_SPREAD * entry["price"],
+            # With real listing counts, a thin market is one with too few listings to sell into quickly.
+            "thin": entry["listings"] < MIN_LISTINGS,
             "listings": entry["listings"],
             "seen_at": entry["seen_at"],
         }

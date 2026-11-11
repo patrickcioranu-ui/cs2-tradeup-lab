@@ -89,8 +89,18 @@ class CsfloatLiveTests(unittest.TestCase):
         }
         out = combine_prices(live, dump)
         self.assertEqual(out["AK-47 | Redline (Field-Tested)"], {"price": 21.4, "buy_order": 20.9, "thin": False, "listings": 3749, "seen_at": SEEN})
-        self.assertTrue(out["Thin (Well-Worn)"]["thin"])  # buy order 5 < 70% of live 10
+        self.assertTrue(out["Thin (Well-Worn)"]["thin"])  # only 2 listed
         self.assertEqual(out["No Orders (Battle-Scarred)"]["buy_order"], None)
-        self.assertTrue(out["No Orders (Battle-Scarred)"]["thin"])
+        self.assertFalse(out["No Orders (Battle-Scarred)"]["thin"])  # 40 listed: easy to sell at the listing
         self.assertNotIn("Stale Only In Dump (Factory New)", out)  # not listed on CSFloat now
         self.assertEqual(out["★ Karambit | Doppler (Factory New) [Ruby]"]["price"], 5800.0)  # phases from the dump
+
+
+class JunkBuyOrderTests(unittest.TestCase):
+    def test_junk_buy_orders_are_ignored_and_listing_counts_decide_thin(self):
+        from cs2_tradeup.csfloat_prices import combine_prices
+        live = {"AK-47 | Neon Revolution (Factory New)": {"price": 150.01, "listings": 72, "seen_at": SEEN}}
+        dump = {"AK-47 | Neon Revolution (Factory New)": {"price": 150.0, "buy_order": 0.01, "thin": True, "listings": None, "seen_at": SEEN}}
+        out = combine_prices(live, dump)["AK-47 | Neon Revolution (Factory New)"]
+        self.assertIsNone(out["buy_order"])  # 0.01 on a 150 item is a lowball, not a real bid
+        self.assertFalse(out["thin"])
