@@ -42,6 +42,7 @@
         <nav class="tabs" role="tablist" aria-label="Tools">
           <button class="tab active" type="button" role="tab" data-tab="finder" aria-selected="true">Finder</button>
           <button class="tab" type="button" role="tab" data-tab="hunter" aria-selected="false">Knife Hunter</button>
+          <button class="tab" type="button" role="tab" data-tab="skins" aria-selected="false">Skin Hunter</button>
         </nav>
 
         <section class="panel finder-panel" id="finder" aria-label="Trade-up finder">
@@ -105,7 +106,7 @@
                 <option value="best">Best in wear (optimistic)</option>
               </select>
             </label>
-            <label title="Thin market: no buy order near the listing">Value thin outputs at
+            <label title="Thin market: fewer than 5 CSFloat listings">Value thin outputs at
               <select id="thinValuation">
                 <option value="buy_order">Buy order (safe)</option>
                 <option value="listing">Listing (if ≤ 2× buy order)</option>
@@ -181,6 +182,46 @@
             </table>
           </div>
           <p class="panel-description">Chance of target counts only the knives/gloves you chose; EV and profit include every possible outcome. Click a row for the full trade-up details.</p>
+        </section>
+        <section class="panel finder-panel" id="skinhunter" aria-label="Skin hunter" hidden>
+          <div class="panel-heading">
+            <div>
+              <span class="panel-kicker">01 / SKIN HUNTER</span>
+              <h2>Hunt a specific skin</h2>
+            </div>
+            <span class="count-pill" id="skinPill">Top 50</span>
+          </div>
+          <p class="panel-description">Pick the skin you want and see which 10-input trade-ups give you the best chance of getting it. Uses the Input float, thin-output and fee settings from the Finder tab.</p>
+          <div class="controls-grid">
+            <label>Skin you want <input id="skinQuery" class="field text-field" type="search" list="skinNames" placeholder="e.g. AK-47 | Neon Revolution" autocomplete="off" /></label>
+            <datalist id="skinNames"></datalist>
+            <label>Wear
+              <select id="skinWear">
+                <option value="">Any</option>
+                <option value="FN">Factory New</option><option value="MW">Minimal Wear</option><option value="FT">Field-Tested</option>
+                <option value="WW">Well-Worn</option><option value="BS">Battle-Scarred</option>
+              </select>
+            </label>
+            <label>Max budget <span class="input-with-suffix"><input id="skinBudget" type="number" min="0" step="5" placeholder="none" /><span>€</span></span></label>
+            <label>Show
+              <select id="skinLimit"><option value="50">Top 50</option><option value="100">Top 100</option><option value="250">Top 250</option></select>
+            </label>
+            <label class="checkbox"><input id="skinStattrak" type="checkbox" /> StatTrak™</label>
+            <div class="controls-action">
+              <button id="skinButton" class="primary-button" type="button" disabled><span>Hunt</span><span class="button-arrow">↗</span></button>
+            </div>
+          </div>
+          <div class="progress" id="skinProgress" hidden><div class="progress-bar" id="skinProgressBar"></div></div>
+          <div id="skinMessage" class="finder-message" hidden></div>
+          <div class="table-wrap" id="skinTableWrap" hidden>
+            <table>
+              <thead>
+                <tr><th>#</th><th>Inputs</th><th>Chance of your skin</th><th>Cost</th><th>Cost per hit</th><th>EV</th><th>Profit</th><th>Profit chance</th><th>Your skin lands as</th><th></th></tr>
+              </thead>
+              <tbody id="skinResults"></tbody>
+            </table>
+          </div>
+          <p class="panel-description">Chance of your skin counts only that skin; EV and profit include every possible outcome. Click a row for the full trade-up details.</p>
         </section>
 
         <section class="workspace-grid calculator" id="calculator" aria-label="Trade-up calculator">
@@ -286,7 +327,7 @@
               equally likely. Output floats use CS2's weighted-float rule. Prices are the lowest current CSFloat
               listings and listing counts from CSFloat's public price list (buy orders and Doppler phases via
               prices.csgotrader.app), converted to euros at CSFloat's own rate and refreshed every hour. A listing
-              is not a guaranteed sale price: "thin market" means there is no buy order near the listing, so selling at
+              is not a guaranteed sale price: "thin market" means fewer than 5 listings on CSFloat, so selling at
               that price may take a long time. Spreads, volatility, trade locks and fees can change the result.
             </p>
           </div>

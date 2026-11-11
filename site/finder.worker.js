@@ -1,10 +1,11 @@
-// Runs the trade-up search (Finder) or knife hunt (Knife Hunter) off the main thread.
+// Runs the Finder search, Knife Hunter and Skin Hunter off the main thread.
 import { findTradeUps } from "./finder.js";
 import { findHunts } from "./hunter.js";
+import { findSkinHunts } from "./skinhunter.js";
 import { priceLookup } from "./data.js";
 
 self.onmessage = ({ data }) => {
-  const search = { search: findTradeUps, hunt: findHunts }[data.type];
+  const search = { search: findTradeUps, hunt: findHunts, skinhunt: findSkinHunts }[data.type];
   if (!search) return;
   try {
     let last = 0;

@@ -3,6 +3,7 @@ import { loadData, priceLookup, priceSource } from "./data.js";
 import { contractSize, hasOutputs, outputPool } from "./finder.js";
 import { floatScan } from "./floatscan.js";
 import { knifeTypes } from "./hunter.js";
+import { huntableSkins } from "./skinhunter.js";
 import { atCheapestListings, buildDetails, detailsText } from "./details.js";
 
 const TIER_NAMES = ["Consumer", "Industrial", "Mil-Spec", "Restricted", "Classified", "Covert", "Knife/Gloves"];
@@ -210,7 +211,7 @@ function renderHuntResults(results) {
         <td class="${(a.profit ?? 0) >= 0 ? "positive" : "negative"}">${a.profit === null ? "—" : signed(a.profit)}</td>
         <td>${a.pProfit === null ? "—" : percent.format(a.pProfit)}</td>
         <td class="targets">${escapeHtml(landsText)}</td>
-        <td>${r.lowLiquidity ? '<span class="badge" title="An input or output has fewer than 5 CSFloat listings, or an output has no buy order near its listing price">low liquidity</span>' : ""}</td>
+        <td>${r.lowLiquidity ? '<span class="badge" title="An input or output has fewer than 5 CSFloat listings (hard to buy or sell at the listed price)">low liquidity</span>' : ""}</td>
       </tr>`;
   }).join("");
 }
@@ -222,6 +223,107 @@ function onHuntActivate(event) {
   openDetails(resultContext(lastHunts[Number(row.dataset.hunt)]));
 }
 
+// ---------- Skin Hunter ----------
+
+let skinWorker = null;
+let lastSkinHunts = [];
+
+function skinOptions() {
+  const raw = $("#skinBudget").value.trim();
+  const budget = Number(raw);
+  return {
+    skin: $("#skinQuery").value.trim().replace(/^StatTrak™ /, ""),
+    wear: $("#skinWear").value || null,
+    stattrak: $("#skinStattrak").checked,
+    maxBudget: raw === "" || !Number.isFinite(budget) ? null : budget,
+    limit: Number($("#skinLimit").value) || 50,
+    floatMode: $("#floatMode").value,
+    thinValuation: $("#thinValuation").value,
+    ...fees(),
+  };
+}
+
+function showSkinMessage(text) {
+  $("#skinMessage").textContent = text;
+  $("#skinMessage").hidden = false;
+  $("#skinTableWrap").hidden = true;
+}
+
+function runSkinHunt() {
+  if (!data) return;
+  const opts = skinOptions();
+  if (!opts.skin) {
+    showSkinMessage("Type the skin you want, for example AK-47 | Neon Revolution, and pick it from the list.");
+    return;
+  }
+  if (!huntableSkinSet.has(opts.skin)) {
+    showSkinMessage(`"${opts.skin}" isn't a skin a trade-up can produce. Pick one from the suggestions (Industrial to Covert weapon skins).`);
+    return;
+  }
+  if (skinWorker) skinWorker.terminate();
+  $("#skinPill").textContent = `Top ${opts.limit}`;
+  skinWorker = new Worker(new URL("finder.worker.js", import.meta.url), { type: "module" });
+  $("#skinProgress").hidden = false;
+  $("#skinProgressBar").style.width = "30%";
+  $("#skinMessage").hidden = true;
+  skinWorker.onmessage = ({ data: msg }) => {
+    if (msg.type === "done") {
+      $("#skinProgress").hidden = true;
+      renderSkinHunts(msg.results, opts);
+      skinWorker.terminate();
+      skinWorker = null;
+    }
+    if (msg.type === "error") {
+      $("#skinProgress").hidden = true;
+      showSkinMessage(`Hunt failed: ${msg.message}`);
+    }
+  };
+  skinWorker.postMessage({ type: "skinhunt", catalog: data.catalog, prices: data.prices, opts });
+}
+
+function renderSkinHunts(results, opts) {
+  lastSkinHunts = results;
+  if (!results.length) {
+    showSkinMessage(opts.stattrak
+      ? "No trade-up found. This skin may not exist in StatTrak, or nothing fits the wear or budget."
+      : "No trade-up found for that wear or budget. Try Any wear, a bigger budget, or the Best in wear input float setting.");
+    return;
+  }
+  $("#skinTableWrap").hidden = false;
+  $("#skinResults").innerHTML = results.map((r, i) => {
+    const a = r.analysis;
+    const t = r.targets[0];
+    return `
+      <tr class="clickable" data-skinhunt="${i}" tabindex="0">
+        <td>${i + 1}</td>
+        <td class="legs">${escapeHtml(legsLabel(r))}</td>
+        <td class="probability">${oneIn(r.hitChance)}</td>
+        <td>${currency.format(a.cost)}</td>
+        <td>${currency.format(r.costPerHit)}</td>
+        <td>${a.ev === null ? "—" : currency.format(a.ev)}</td>
+        <td class="${(a.profit ?? 0) >= 0 ? "positive" : "negative"}">${a.profit === null ? "—" : signed(a.profit)}</td>
+        <td>${a.pProfit === null ? "—" : percent.format(a.pProfit)}</td>
+        <td class="targets">${escapeHtml(`${WEAR_NAME[t.wear]}${t.value === null ? "" : ` · worth ${currency.format(t.value)}`}`)}</td>
+        <td>${r.lowLiquidity ? '<span class="badge" title="An input or output has fewer than 5 CSFloat listings (hard to buy or sell at the listed price)">low liquidity</span>' : ""}</td>
+      </tr>`;
+  }).join("");
+}
+
+function onSkinHuntActivate(event) {
+  const row = event.target.closest("tr[data-skinhunt]");
+  if (!row) return;
+  if (event.type === "keydown" && event.key !== "Enter") return;
+  openDetails(resultContext(lastSkinHunts[Number(row.dataset.skinhunt)]));
+}
+
+let huntableSkinSet = new Set();
+
+function fillSkinNames() {
+  const names = huntableSkins(data.catalog);
+  huntableSkinSet = new Set(names);
+  $("#skinNames").innerHTML = names.map((n) => `<option value="${escapeHtml(n)}"></option>`).join("");
+}
+
 function showTab(name) {
   for (const tab of document.querySelectorAll(".tab")) {
     const active = tab.dataset.tab === name;
@@ -230,6 +332,7 @@ function showTab(name) {
   }
   $("#finder").hidden = name !== "finder";
   $("#hunter").hidden = name !== "hunter";
+  $("#skinhunter").hidden = name !== "skins";
 }
 
 function showFinderMessage(text) {
@@ -263,7 +366,7 @@ function renderFinderResults(results) {
         <td>${a.roi === null ? "—" : percent.format(a.roi)}</td>
         <td class="probability">${percent.format(a.pProfit)}</td>
         <td class="${a.bestProfit >= 0 ? "positive" : "negative"}" title="${a.jackpotMultiple === null ? "" : `${a.jackpotMultiple.toFixed(1)}× your inputs`}">${signed(a.bestProfit)} (${percent.format(a.bestChance)})</td>
-        <td>${r.lowLiquidity ? '<span class="badge" title="An input or output has fewer than 5 CSFloat listings, or an output has no buy order near its listing price">low liquidity</span>' : ""}</td>
+        <td>${r.lowLiquidity ? '<span class="badge" title="An input or output has fewer than 5 CSFloat listings (hard to buy or sell at the listed price)">low liquidity</span>' : ""}</td>
       </tr>`;
   }).join("");
 }
@@ -420,7 +523,7 @@ function renderAnalysis(analysis) {
   ].join("");
   $("#outcomeTable").innerHTML = a.outcomes.map((o) => `
     <tr>
-      <td>${escapeHtml(o.name)}${o.thin || o.sold24h === false ? ' <span class="badge" title="No buy order near the listing price">thin market</span>' : ""}</td>
+      <td>${escapeHtml(o.name)}${o.thin || o.sold24h === false ? ' <span class="badge" title="Fewer than 5 CSFloat listings: hard to sell at the listed price">thin market</span>' : ""}</td>
       <td class="probability">${percent.format(o.probability)}</td>
       <td>${o.float.toFixed(4)}</td>
       <td>${WEAR_NAME[o.wear]}</td>
@@ -546,7 +649,7 @@ function openDetails(context) {
   const assumptions = `Assumptions: ${floatText}; thin outputs valued at ${thinText}; sale fee ${feeText}.`;
   const fmt = (v, f) => (v === null || v === undefined ? "—" : f(v));
   const hunt = context.hunt
-    ? `<p class="panel-description">Chance of your Knife Hunter target: <strong class="positive">${oneIn(context.hunt.hitChance)}</strong> · cost per hit ${currency.format(context.hunt.costPerHit)}</p>`
+    ? `<p class="panel-description">Chance of your target: <strong class="positive">${oneIn(context.hunt.hitChance)}</strong> · cost per hit ${currency.format(context.hunt.costPerHit)}</p>`
     : "";
   $("#detailsBody").innerHTML = `
     <div class="metrics-grid">
@@ -584,7 +687,7 @@ function openDetails(context) {
         <tbody>${d.outcomes.map((o) => `
           <tr class="${o.best ? "best-outcome" : o.worst ? "worst-outcome" : ""}">
             <td class="probability">${percent.format(o.probability)}</td>
-            <td>${escapeHtml(o.name)}${o.best ? ' <span class="badge current-badge">best</span>' : o.worst ? ' <span class="badge">worst</span>' : ""}${o.thin ? ' <span class="badge" title="No buy order near the listing price">thin market</span>' : ""}<br><span class="panel-description">${escapeHtml(o.collection)}${Number.isFinite(o.listings) ? ` · ${listedText(o.listings)}` : ""}</span></td>
+            <td>${escapeHtml(o.name)}${o.best ? ' <span class="badge current-badge">best</span>' : o.worst ? ' <span class="badge">worst</span>' : ""}${o.thin ? ' <span class="badge" title="Fewer than 5 CSFloat listings: hard to sell at the listed price">thin market</span>' : ""}<br><span class="panel-description">${escapeHtml(o.collection)}${Number.isFinite(o.listings) ? ` · ${listedText(o.listings)}` : ""}</span></td>
             <td>${o.float.toFixed(4)}</td>
             <td>${WEAR_NAME[o.wear]}</td>
             <td>${o.value === null ? "no price" : currency.format(o.value)}</td>
@@ -694,6 +797,10 @@ async function copyDetails() {
 async function boot() {
   $("#findButton").addEventListener("click", runFinder);
   $("#huntButton").addEventListener("click", runHunt);
+  $("#skinButton").addEventListener("click", runSkinHunt);
+  $("#skinQuery").addEventListener("keydown", (e) => { if (e.key === "Enter") runSkinHunt(); });
+  $("#skinResults").addEventListener("click", onSkinHuntActivate);
+  $("#skinResults").addEventListener("keydown", onSkinHuntActivate);
   $("#huntType").addEventListener("change", fillKnifeFinishes);
   $("#floatScanTable").addEventListener("click", onScanActivate);
   $("#floatScanTable").addEventListener("keydown", onScanActivate);
@@ -731,6 +838,8 @@ async function boot() {
   $("#findButton").disabled = false;
   $("#huntButton").disabled = false;
   fillKnifeTypes();
+  fillSkinNames();
+  $("#skinButton").disabled = false;
   renderCalculator();
 }
 

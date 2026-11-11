@@ -17,6 +17,8 @@ ROI or chance of profit.
   Doppler phase, wear, minimum value and StatTrak, and see
   the 5-Covert trade-ups with the highest chance of hitting it, the cost per hit (input cost ÷ chance) and the full
   trade-up's EV and profit chance.
+- **Skin Hunter tab:** pick any weapon skin a trade-up can produce (with optional wear, StatTrak and budget) and see
+  the 10-input trade-ups with the highest chance of getting it, the cost per hit and the full EV.
 - **Finder filters:** min/max profit chance, min profit, min ROI, min best case (€) and min jackpot (×), max budget, collection, tier (including
   Covert → Knife/Gloves), StatTrak, liquidity, and 50–500 results. If nothing meets the profit filters, the best
   trade-ups are shown anyway with a note.
@@ -31,8 +33,8 @@ ROI or chance of profit.
   range uses exactly what you entered.
 - **Jackpot search:** a *Best case* column (profit if you hit the most valuable outcome, with its chance) and a
   *Biggest best case* sort, for long shots with big payouts; pair it with *Max profit chance*.
-- **Low-liquidity warning:** shown when any input or output has fewer than 5 CSFloat listings, or an output has no
-  buy order or a best buy order below 70% of its lowest listing (selling near the listing price is unlikely).
+- **Low-liquidity warning:** shown when any input or output has fewer than 5 CSFloat listings (a thin market:
+  selling near the listed price is unlikely). Buy orders under 5% of the listing are ignored as lowballs.
 
 ## Model and assumptions
 
