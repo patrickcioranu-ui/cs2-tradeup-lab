@@ -1,6 +1,6 @@
 // Skin Hunter: rank normal 10-input trade-ups by the chance of getting one chosen weapon skin.
 import { analyze, normalizeFloat, wearForFloat } from "./engine.js";
-import { huntComparator, inputOptions, isLowLiquidity, outputPool } from "./finder.js";
+import { huntComparator, inputOptions, isLowLiquidity, legsToInputs, outputPool, priceLegs } from "./finder.js";
 
 const SIZE = 10;
 
@@ -33,7 +33,7 @@ function findTarget(catalog, name) {
 export function findSkinHunts(catalog, lookup, opts, onProgress = () => {}) {
   const {
     skin = "", wear = null, stattrak = false, maxBudget = null, limit = 50,
-    feeRate = 0.02, fixedFee = 0, floatMode = "worst", thinValuation = "buy_order",
+    feeRate = 0.02, fixedFee = 0, floatMode = "worst", thinValuation = "buy_order", ladders = null,
   } = opts;
   const target = skin ? findTarget(catalog, skin) : null;
   if (!target || (stattrak && !target.skin.stattrak_available)) return [];
@@ -48,8 +48,10 @@ export function findSkinHunts(catalog, lookup, opts, onProgress = () => {}) {
   const displayName = `${stattrak ? "StatTrak™ " : ""}${target.skin.market_base_name}`;
 
   const results = [];
-  const consider = (legs) => {
-    const cost = legs.reduce((s, l) => s + l.option.price * l.count, 0);
+  const now = Date.now();
+  const consider = (rawLegs) => {
+    const legs = priceLegs(rawLegs, ladders, now);
+    const cost = legs.reduce((s, l) => s + l.costs.reduce((a, c) => a + c, 0), 0);
     if (maxBudget !== null && cost > maxBudget + 1e-9) return;
     const w = legs.reduce((s, l) => s + l.count * normalizeFloat(l.option.float, l.option.skin.min_float, l.option.skin.max_float), 0) / SIZE;
     const float = target.skin.min_float + w * (target.skin.max_float - target.skin.min_float);
@@ -59,9 +61,7 @@ export function findSkinHunts(catalog, lookup, opts, onProgress = () => {}) {
     const hitChance = (ownCount / SIZE) / pool.length;
     if (hitChance <= 0) return;
 
-    const inputs = legs.flatMap((l) => Array.from({ length: l.count }, () => ({
-      collection: l.option.collection, float: l.option.float, minFloat: l.option.skin.min_float, maxFloat: l.option.skin.max_float, cost: l.option.price,
-    })));
+    const inputs = legsToInputs(legs);
     const outputsByCollection = Object.fromEntries(legs.map((l) => [l.option.collection, pools[l.option.collection]]));
     const analysis = analyze({ inputs, outputsByCollection, feeRate, fixedFee, thinValuation });
     const outcome = analysis.outcomes.find((o) => o.name === displayName && o.collection === target.collectionName);

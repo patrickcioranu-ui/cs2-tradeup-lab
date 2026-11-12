@@ -188,3 +188,28 @@ test("low liquidity uses real listing counts: any input or output with fewer tha
   assert.equal(best({ "A-out2 (Minimal Wear)": 4 }).lowLiquidity, true); // thin output
   assert.equal(best({ "A-out2 (Minimal Wear)": 8 }).lowLiquidity, false); // 8 listed is enough
 });
+
+const fresh = () => new Date().toISOString();
+const singleA = (ladders) => findTradeUps(catalog, lookup, { ...base, ladders }).find((r) => legKey(r) === "10xA-cheap:MW");
+
+test("price ladders: 10 copies cost the sum of the 10 cheapest real listings", () => {
+  const prices = [1, 1, 1.1, 1.1, 1.2, 1.2, 1.3, 1.3, 1.4, 1.5];
+  const r = singleA({ "A-cheap (Minimal Wear)": { prices, fetched_at: fresh() } });
+  close(r.analysis.cost, 12.1);
+  assert.deepEqual(r.legs[0].costs, prices);
+  assert.equal(r.legs[0].priced, "ladder");
+});
+
+test("price ladders: too few listings fills the rest at the last price and says so", () => {
+  const r = singleA({ "A-cheap (Minimal Wear)": { prices: [1, 1.2], fetched_at: fresh() } });
+  close(r.analysis.cost, 1 + 1.2 * 9);
+  assert.equal(r.legs[0].priced, "ladder-short");
+});
+
+test("price ladders: stale or missing ladders fall back to the cheapest listing", () => {
+  const old = new Date(Date.now() - 30 * 3600_000).toISOString();
+  const stale = singleA({ "A-cheap (Minimal Wear)": { prices: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fetched_at: old } });
+  close(stale.analysis.cost, 10);
+  assert.equal(stale.legs[0].priced, "estimated");
+  close(singleA(undefined).analysis.cost, 10);
+});

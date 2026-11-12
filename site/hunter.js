@@ -1,6 +1,6 @@
 // Knife Hunter: rank 5-Covert trade-ups by the chance of hitting a chosen knife/gloves target.
 import { analyze, marketName, normalizeFloat, saleValue, wearForFloat } from "./engine.js";
-import { GEMS, GEM_PHASE_ODDS, KNIFE_TIER, huntComparator, inputOptions, isLowLiquidity, outputPool, specialPool } from "./finder.js";
+import { GEMS, GEM_PHASE_ODDS, KNIFE_TIER, huntComparator, inputOptions, isLowLiquidity, legsToInputs, outputPool, priceLegs, specialPool } from "./finder.js";
 
 const SIZE = 5;
 
@@ -46,7 +46,7 @@ function displayName(entry, stattrak) {
 export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
   const {
     query = "", itemType = null, finish = null, phase = null, minValue = null, wear = null, stattrak = false, maxBudget = null, limit = 50,
-    feeRate = 0.02, fixedFee = 0, floatMode = "worst", thinValuation = "buy_order",
+    feeRate = 0.02, fixedFee = 0, floatMode = "worst", thinValuation = "buy_order", ladders = null,
   } = opts;
   const q = String(query || "").trim().toLowerCase();
   if (!q && !itemType && !finish && !phase && minValue === null) return [];
@@ -72,9 +72,11 @@ export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
   const pools = Object.fromEntries(groups.map(([name]) => [name, outputPool(catalog, lookup, name, KNIFE_TIER + 1, stattrak)]));
 
   const results = [];
-  const consider = (legs) => {
+  const now = Date.now();
+  const consider = (rawLegs) => {
+    const legs = priceLegs(rawLegs, ladders, now);
     if (!legs.some((l) => hasTarget(l.option.collection))) return;
-    const cost = legs.reduce((s, l) => s + l.option.price * l.count, 0);
+    const cost = legs.reduce((s, l) => s + l.costs.reduce((a, c) => a + c, 0), 0);
     if (maxBudget !== null && cost > maxBudget + 1e-9) return;
     const w = legs.reduce((s, l) => s + l.count * normalizeFloat(l.option.float, l.option.skin.min_float, l.option.skin.max_float), 0) / SIZE;
 
@@ -97,9 +99,7 @@ export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
     }
     if (hitChance <= 0) return;
 
-    const inputs = legs.flatMap((l) => Array.from({ length: l.count }, () => ({
-      collection: l.option.collection, float: l.option.float, minFloat: l.option.skin.min_float, maxFloat: l.option.skin.max_float, cost: l.option.price,
-    })));
+    const inputs = legsToInputs(legs);
     const outputsByCollection = Object.fromEntries(legs.map((l) => [l.option.collection, pools[l.option.collection]]));
     const analysis = analyze({ inputs, outputsByCollection, feeRate, fixedFee, thinValuation });
     results.push({ tier: KNIFE_TIER, stattrak, legs, analysis, hitChance, costPerHit: cost / hitChance, targets, lowLiquidity: isLowLiquidity(analysis, legs) });

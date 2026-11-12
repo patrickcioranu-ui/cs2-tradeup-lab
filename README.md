@@ -33,6 +33,10 @@ ROI or chance of profit.
   range uses exactly what you entered.
 - **Jackpot search:** a *Best case* column (profit if you hit the most valuable outcome, with its chance) and a
   *Biggest best case* sort, for long shots with big payouts; pair it with *Max profit chance*.
+- **Real price ladders (optional):** with a CSFloat API key stored as the `CSFLOAT_API_KEY` repository secret, each
+  hourly deploy reads the cheapest 10 buy-now listings for a batch of input skins (oldest first, the rest carried
+  over), so buying several copies costs the real sum of the cheapest listings instead of N x the cheapest. Ladders
+  older than 24 h are ignored. Without the key everything works as before.
 - **Low-liquidity warning:** shown when any input or output has fewer than 5 CSFloat listings (a thin market:
   selling near the listed price is unlikely). Buy orders under 5% of the listing are ignored as lowballs.
 

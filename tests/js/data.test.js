@@ -42,3 +42,16 @@ test("priceLookup and priceSource use the file's own source when none is named",
   assert.equal(priceLookup(prices)("AK-47 | Redline (Field-Tested)").price, 21.15);
   assert.deepEqual(priceSource(prices), { name: "csfloat", feeRate: 0.02 });
 });
+
+test("loadData includes price ladders when present and works without them", async () => {
+  const ladders = { updated_at: "x", ladders: { "AK-47 | Redline (Field-Tested)": { prices: [21, 21.5], fetched_at: "x" } } };
+  const withLadders = await loadData(stubFetch({ "catalog.json": catalog, "prices.json": pricesAt(hoursAgo(1)), "ladders.json": ladders }));
+  assert.deepEqual(withLadders.ladders, ladders.ladders);
+  const without = await loadData(stubFetch({ "catalog.json": catalog, "prices.json": pricesAt(hoursAgo(1)) }));
+  assert.equal(without.ladders, null);
+});
+
+test("an empty ladders file counts as no ladders", async () => {
+  const data = await loadData(stubFetch({ "catalog.json": catalog, "prices.json": pricesAt(hoursAgo(1)), "ladders.json": { ladders: {} } }));
+  assert.equal(data.ladders, null);
+});

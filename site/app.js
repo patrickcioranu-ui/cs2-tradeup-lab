@@ -58,6 +58,7 @@ function finderOptions() {
     stattrak: $("#stattrakSelect").value,
     sortBy: $("#sortSelect").value,
     limit: Number($("#limitSelect").value) || 50,
+    ladders: data?.ladders || null,
     ...fees(),
   };
 }
@@ -131,6 +132,7 @@ function huntOptions() {
     maxBudget: number("#huntBudget"),
     limit: Number($("#huntLimit").value) || 50,
     sortBy: $("#huntSort").value,
+    ladders: data?.ladders || null,
     floatMode: $("#floatMode").value,
     thinValuation: $("#thinValuation").value,
     ...fees(),
@@ -239,6 +241,7 @@ function skinOptions() {
     maxBudget: raw === "" || !Number.isFinite(budget) ? null : budget,
     limit: Number($("#skinLimit").value) || 50,
     sortBy: $("#skinSort").value,
+    ladders: data?.ladders || null,
     floatMode: $("#floatMode").value,
     thinValuation: $("#thinValuation").value,
     ...fees(),
@@ -620,15 +623,17 @@ function renderFloatScan() {
 let lastScanRows = [];
 let detailsContext = null;
 
+// Each copy at its own price: the k-th cheapest real listing when a price ladder was used.
 function resultInputs(result) {
-  return result.legs.flatMap((l) => Array.from({ length: l.count }, () => ({
+  return result.legs.flatMap((l) => Array.from({ length: l.count }, (_, i) => ({
     collection: l.option.collection, skinId: l.option.skin.id, label: l.option.skin.market_base_name,
-    float: l.option.float, minFloat: l.option.skin.min_float, maxFloat: l.option.skin.max_float, cost: l.option.price,
+    float: l.option.float, minFloat: l.option.skin.min_float, maxFloat: l.option.skin.max_float, cost: l.costs ? l.costs[i] : l.option.price,
   })));
 }
 
 function resultContext(result) {
-  return { tier: result.tier, stattrak: result.stattrak, inputs: resultInputs(result), analysis: result.analysis, hunt: result.hitChance ? result : null };
+  const priced = Object.fromEntries(result.legs.filter((l) => l.option.name).map((l) => [l.option.name, l.priced || "estimated"]));
+  return { tier: result.tier, stattrak: result.stattrak, inputs: resultInputs(result), analysis: result.analysis, hunt: result.hitChance ? result : null, priced };
 }
 
 function scanContext(row) {
@@ -638,7 +643,7 @@ function scanContext(row) {
 
 function openDetails(context) {
   detailsContext = context;
-  const d = buildDetails({ inputs: context.inputs, analysis: context.analysis, stattrak: context.stattrak });
+  const d = buildDetails({ inputs: context.inputs, analysis: context.analysis, stattrak: context.stattrak, priced: context.priced || {} });
   detailsContext.details = d;
   const a = context.analysis;
   const tierText = `${TIER_NAMES[context.tier]} → ${TIER_NAMES[context.tier + 1]}${context.stattrak ? " · StatTrak™" : ""}`;
@@ -675,7 +680,7 @@ function openDetails(context) {
             <td>${escapeHtml(s.marketName)}<br><span class="panel-description">${escapeHtml(s.collection)}</span></td>
             <td>${WEAR_NAME[s.wear]}</td>
             <td>${s.maxFloat.toFixed(4)}</td>
-            <td>${Number.isFinite(s.price) ? currency.format(s.price) : "—"}</td>
+            <td>${priceUsedCell(s)}</td>
             <td>${cheapestCell(s)}</td>
             <td>${s.subtotal === null ? "—" : currency.format(s.subtotal)}</td>
             <td><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">Find on CSFloat ↗</a></td>
@@ -701,6 +706,21 @@ function openDetails(context) {
     </div>`;
   $("#detailsCopied").hidden = true;
   $("#detailsDialog").showModal();
+}
+
+// Price used for a shopping line: a range when copies were bought up a real price ladder.
+function priceUsedCell(s) {
+  if (!Number.isFinite(s.price)) return "—";
+  const range = s.minPrice !== null && s.maxPrice - s.minPrice > 0.004
+    ? `${currency.format(s.minPrice)} → ${currency.format(s.maxPrice)}`
+    : currency.format(s.price);
+  if (!data?.ladders) return range;
+  const tag = s.priced === "ladder"
+    ? ' <span class="badge current-badge" title="Each copy priced at the next-cheapest real CSFloat listing">real listings</span>'
+    : s.priced === "ladder-short"
+      ? ' <span class="badge" title="Fewer listings than copies needed: the rest are priced at the last listing">not enough listed</span>'
+      : ' <span class="badge" title="No recent price ladder for this skin: every copy priced at the cheapest listing">estimated</span>';
+  return `${range}${tag}`;
 }
 
 function listedText(n) {

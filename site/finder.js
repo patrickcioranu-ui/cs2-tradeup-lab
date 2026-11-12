@@ -65,7 +65,7 @@ export function inputOptions(catalog, lookup, tier, stattrak, floatMode = "worst
         if (!quote || !(quote.price > 0) || quote.listings === 0) continue;
         if (!best || quote.price < best.price) {
           const float = inputFloat(skin, wear, floatMode);
-          best = { collection: name, skin, wear: wear.code, float, norm: normalizeFloat(float, skin.min_float, skin.max_float), price: quote.price, listings: quote.listings };
+          best = { collection: name, name: marketName(skin.market_base_name, wear.code, stattrak), skin, wear: wear.code, float, norm: normalizeFloat(float, skin.min_float, skin.max_float), price: quote.price, listings: quote.listings };
         }
       }
       if (best) cheapest.push(best);
@@ -140,11 +140,29 @@ function comparator(sortBy) {
   return (a, b) => (b.analysis[key] ?? -Infinity) - (a.analysis[key] ?? -Infinity) || a.analysis.cost - b.analysis.cost;
 }
 
-function legsToInputs(legs) {
+// Real price ladders (cheapest CSFloat listings per input skin) older than this are ignored.
+export const MAX_LADDER_AGE_MS = 24 * 3600 * 1000;
+
+// What each copy of a leg costs: the k-th copy is the k-th cheapest listing when a fresh ladder
+// exists ("ladder"; "ladder-short" when fewer listings than copies, the rest at the last price),
+// otherwise every copy at the cheapest listing ("estimated").
+export function legCosts(leg, ladders, now = Date.now()) {
+  const ladder = ladders?.[leg.option.name];
+  const fresh = ladder?.prices?.length && now - Date.parse(ladder.fetched_at) <= MAX_LADDER_AGE_MS;
+  if (!fresh) return { costs: Array(leg.count).fill(leg.option.price), priced: "estimated" };
+  const costs = Array.from({ length: leg.count }, (_, i) => ladder.prices[Math.min(i, ladder.prices.length - 1)]);
+  return { costs, priced: ladder.prices.length >= leg.count ? "ladder" : "ladder-short" };
+}
+
+export function priceLegs(legs, ladders, now = Date.now()) {
+  return legs.map((l) => ({ ...l, ...legCosts(l, ladders, now) }));
+}
+
+export function legsToInputs(legs) {
   const inputs = [];
-  for (const { option, count } of legs) {
+  for (const { option, count, costs } of legs) {
     for (let i = 0; i < count; i++) {
-      inputs.push({ collection: option.collection, float: option.float, minFloat: option.skin.min_float, maxFloat: option.skin.max_float, cost: option.price });
+      inputs.push({ collection: option.collection, float: option.float, minFloat: option.skin.min_float, maxFloat: option.skin.max_float, cost: costs ? costs[i] : option.price });
     }
   }
   return inputs;
@@ -154,7 +172,7 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   const {
     minProfitChance = 0, maxProfitChance = null, maxBudget = null, minBestProfit = null, minJackpot = null, minProfit = null, minRoi = null, hideLowLiquidity = false, collectionQuery = "",
     tiers = [0, 1, 2, 3, 4], stattrak = "normal", sortBy = "profit", limit = 50, feeRate = 0.15, fixedFee = 0,
-    floatMode = "worst", thinValuation = "buy_order",
+    floatMode = "worst", thinValuation = "buy_order", ladders = null,
   } = opts;
   const query = String(collectionQuery || "").trim().toLowerCase();
   const modes = stattrak === "both" ? [false, true] : [stattrak === "stattrak"];
@@ -181,9 +199,11 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   let kept = [];
   let done = 0;
   let lastReport = 0;
-  const consider = (tier, st, legs, pools) => {
+  const now = Date.now();
+  const consider = (tier, st, rawLegs, pools) => {
     done++;
-    const cost = legs.reduce((s, l) => s + l.option.price * l.count, 0);
+    const legs = priceLegs(rawLegs, ladders, now);
+    const cost = legs.reduce((s, l) => s + l.costs.reduce((a, c) => a + c, 0), 0);
     if (maxBudget !== null && cost > maxBudget + 1e-9) return;
     if (query && !legs.some((l) => l.option.collection.toLowerCase().includes(query))) return;
     const outputsByCollection = {};

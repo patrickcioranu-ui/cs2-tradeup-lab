@@ -63,3 +63,11 @@ test("sortBy reorders hunts: chance (default), costPerHit, ev, profit, pProfit",
   const byChance = hunt({ skin: "A-out1" });
   for (let i = 1; i < byChance.length; i++) assert.ok(byChance[i - 1].hitChance >= byChance[i].hitChance);
 });
+
+test("hunts use price ladders for the cost of several copies", () => {
+  const ladders = { "A-cheap (Minimal Wear)": { prices: [1, 1, 1, 1, 1, 2, 2, 2, 2, 2], fetched_at: new Date().toISOString() } };
+  const top = hunt({ skin: "A-out1", ladders }).find((r) => legKey(r) === "10xA-cheap:MW");
+  close(top.analysis.cost, 15);
+  close(top.costPerHit, 30);
+  assert.equal(top.legs[0].priced, "ladder");
+});

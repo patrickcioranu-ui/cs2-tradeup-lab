@@ -18,18 +18,26 @@ function outcomeMarketName(name, wear) {
   return name.startsWith("★") && !name.includes(" | ") ? name : `${name} (${WEAR_NAME[wear]})`;
 }
 
-export function buildDetails({ inputs, analysis, stattrak = false }) {
+// `priced` maps an input's market name to how its copies were priced: "ladder" / "ladder-short"
+// (each copy at the next-cheapest real listing) or "estimated" (every copy at the cheapest listing).
+export function buildDetails({ inputs, analysis, stattrak = false, priced = {} }) {
   const groups = new Map();
   for (const input of inputs) {
     const wear = wearForFloat(input.float);
-    const key = `${input.label}|${wear}|${input.float}|${input.cost}`;
+    const key = `${input.label}|${wear}|${input.float}`;
     if (!groups.has(key)) {
       const name = marketName(input.label, wear, stattrak);
-      groups.set(key, { count: 0, label: input.label, collection: input.collection, marketName: name, wear, maxFloat: input.float, price: input.cost, url: csfloatUrl(name, +input.float.toFixed(4)) });
+      groups.set(key, { count: 0, costs: [], label: input.label, collection: input.collection, marketName: name, wear, maxFloat: input.float, priced: priced[name] || "estimated", url: csfloatUrl(name, +input.float.toFixed(4)) });
     }
-    groups.get(key).count += 1;
+    const g = groups.get(key);
+    g.count += 1;
+    g.costs.push(input.cost);
   }
-  const shopping = [...groups.values()].map((g) => ({ ...g, subtotal: Number.isFinite(g.price) ? g.price * g.count : null }));
+  const shopping = [...groups.values()].map((g) => {
+    const known = g.costs.every((c) => Number.isFinite(c));
+    const subtotal = known ? g.costs.reduce((a, c) => a + c, 0) : null;
+    return { ...g, subtotal, price: known ? subtotal / g.count : null, minPrice: known ? Math.min(...g.costs) : null, maxPrice: known ? Math.max(...g.costs) : null };
+  });
 
   const cost = analysis.cost;
   const outcomes = analysis.outcomes
@@ -71,6 +79,7 @@ export function atCheapestListings(details, cheapest) {
   const a = details.analysis;
   const missing = [];
   const unitPrices = details.shopping.map((s) => {
+    if (s.priced?.startsWith("ladder")) return s.price; // already priced at the real listings, copy by copy
     const price = cheapest(s.marketName);
     if (!Number.isFinite(price)) {
       missing.push(s.marketName);

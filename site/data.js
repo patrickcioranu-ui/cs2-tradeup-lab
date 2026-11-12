@@ -27,7 +27,15 @@ async function getJson(fetchFn, url) {
 export async function loadData(fetchFn = fetch, base = "data/") {
   const [catalog, prices] = await Promise.all([getJson(fetchFn, `${base}catalog.json`), getJson(fetchFn, `${base}prices.json`)]);
   const updatedAt = new Date(prices.updated_at);
-  return { catalog, prices, updatedAt, stale: !(Date.now() - updatedAt.getTime() < STALE_AFTER_MS) };
+  // Optional: real price ladders (only when the site has a CSFloat API key configured).
+  let ladders = null;
+  try {
+    const found = (await getJson(fetchFn, `${base}ladders.json`)).ladders;
+    ladders = found && Object.keys(found).length ? found : null;
+  } catch {
+    ladders = null;
+  }
+  return { catalog, prices, ladders, updatedAt, stale: !(Date.now() - updatedAt.getTime() < STALE_AFTER_MS) };
 }
 
 // The file names its price source (e.g. "csfloat"); default to the first one.

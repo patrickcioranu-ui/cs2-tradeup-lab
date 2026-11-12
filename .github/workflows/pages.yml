@@ -40,6 +40,15 @@ jobs:
       - name: Build skin catalog and CSFloat price data
         run: python scripts/update_data.py
 
+      - name: Refresh CSFloat price ladders (uses the CSFLOAT_API_KEY secret; skipped without it)
+        continue-on-error: true
+        env:
+          CSFLOAT_API_KEY: ${{ secrets.CSFLOAT_API_KEY }}
+          LADDER_BUDGET: "300"
+        run: |
+          node scripts/ladder_targets.mjs > "$RUNNER_TEMP/ladder_targets.json"
+          python scripts/update_ladders.py "$RUNNER_TEMP/ladder_targets.json"
+
       - name: Version-stamp assets so browsers never mix old and new files
         run: python scripts/stamp_assets.py site "${GITHUB_SHA::7}-${GITHUB_RUN_ID}"
 

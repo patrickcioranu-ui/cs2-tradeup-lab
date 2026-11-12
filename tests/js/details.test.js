@@ -86,3 +86,20 @@ test("outcomes carry their listing counts for the popup", () => {
   const d = buildDetails({ inputs, analysis: counted });
   assert.equal(d.outcomes.find((o) => o.name === "AK-47 | Big").listings, 7);
 });
+
+test("ladder-priced copies of one skin are one shopping line with the real subtotal and price range", () => {
+  const laddered = [
+    ...[0.5, 0.5, 0.52, 0.55, 0.61].map((cost) => ({ collection: "A", label: "AUG | Syd Mead", float: 0.3799, minFloat: 0, maxFloat: 1, cost })),
+    ...inputs.slice(5),
+  ];
+  const a2 = analyze({ inputs: laddered, outputsByCollection, feeRate: 0.02 });
+  const d = buildDetails({ inputs: laddered, analysis: a2, priced: { "AUG | Syd Mead (Field-Tested)": "ladder" } });
+  const aug = d.shopping.find((s) => s.label === "AUG | Syd Mead");
+  assert.equal(aug.count, 9);
+  close(aug.subtotal, 0.5 + 0.5 + 0.52 + 0.55 + 0.61 + 4 * 7);
+  assert.equal(aug.minPrice, 0.5);
+  assert.equal(aug.maxPrice, 7);
+  assert.equal(aug.priced, "ladder");
+  const real = atCheapestListings(d, () => 0.4);
+  close(real.cost - a2.cost, (0.4 - 5) * 1); // only the non-ladder Zeus line is repriced (5 -> 0.4)
+});
