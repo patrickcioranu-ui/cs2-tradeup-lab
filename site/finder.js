@@ -4,6 +4,16 @@ import { WEARS, analyze, marketName, normalizeFloat } from "./engine.js";
 // Thin market: an output with no buy order near its listing, or any input/output with fewer than 5 listed.
 export const LOW_LIQUIDITY = 5;
 
+// Sort order for the Knife and Skin Hunters: chance of the target (default), cost per hit, EV, profit or profit chance.
+export function huntComparator(sortBy = "chance") {
+  const desc = (get) => (x, y) => (get(y) ?? -Infinity) - (get(x) ?? -Infinity) || x.costPerHit - y.costPerHit;
+  if (sortBy === "costPerHit") return (x, y) => x.costPerHit - y.costPerHit || y.hitChance - x.hitChance;
+  if (sortBy === "ev") return desc((r) => r.analysis.ev);
+  if (sortBy === "profit") return desc((r) => r.analysis.profit);
+  if (sortBy === "pProfit") return desc((r) => r.analysis.pProfit);
+  return desc((r) => r.hitChance);
+}
+
 export function isLowLiquidity(analysis, legs) {
   const thinInput = legs.some((l) => Number.isFinite(l.option.listings) && l.option.listings < LOW_LIQUIDITY);
   return analysis.illiquid || thinInput || (analysis.minListings !== null && analysis.minListings < LOW_LIQUIDITY);

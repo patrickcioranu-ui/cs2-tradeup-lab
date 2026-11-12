@@ -1,6 +1,6 @@
 // Knife Hunter: rank 5-Covert trade-ups by the chance of hitting a chosen knife/gloves target.
 import { analyze, marketName, normalizeFloat, saleValue, wearForFloat } from "./engine.js";
-import { GEMS, GEM_PHASE_ODDS, KNIFE_TIER, inputOptions, isLowLiquidity, outputPool, specialPool } from "./finder.js";
+import { GEMS, GEM_PHASE_ODDS, KNIFE_TIER, huntComparator, inputOptions, isLowLiquidity, outputPool, specialPool } from "./finder.js";
 
 const SIZE = 5;
 
@@ -116,6 +116,6 @@ export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
   }
   onProgress(1);
   return results
-    .sort((x, y) => y.hitChance - x.hitChance || x.costPerHit - y.costPerHit)
+    .sort(huntComparator(opts.sortBy))
     .slice(0, limit);
 }

@@ -83,3 +83,9 @@ test("itemType works for gloves, and a type alone counts as a target", () => {
   assert.equal(legKey(wraps[0]), "5xB-covert");
   close(wraps[0].hitChance, 1);
 });
+
+test("knife hunts can be sorted by profit too", () => {
+  const rs = hunt({ itemType: "K-knife", sortBy: "profit" });
+  assert.ok(rs.length > 1);
+  for (let i = 1; i < rs.length; i++) assert.ok(rs[i - 1].analysis.profit >= rs[i].analysis.profit);
+});

@@ -1,6 +1,6 @@
 // Skin Hunter: rank normal 10-input trade-ups by the chance of getting one chosen weapon skin.
 import { analyze, normalizeFloat, wearForFloat } from "./engine.js";
-import { inputOptions, isLowLiquidity, outputPool } from "./finder.js";
+import { huntComparator, inputOptions, isLowLiquidity, outputPool } from "./finder.js";
 
 const SIZE = 10;
 
@@ -81,5 +81,5 @@ export function findSkinHunts(catalog, lookup, opts, onProgress = () => {}) {
     }
   }
   onProgress(1);
-  return results.sort((x, y) => y.hitChance - x.hitChance || x.costPerHit - y.costPerHit).slice(0, limit);
+  return results.sort(huntComparator(opts.sortBy)).slice(0, limit);
 }

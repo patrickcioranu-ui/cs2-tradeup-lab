@@ -50,3 +50,16 @@ test("budget and unknown skins", () => {
   assert.equal(hunt({ skin: "Nope" }).length, 0);
   assert.equal(hunt({}).length, 0);
 });
+
+test("sortBy reorders hunts: chance (default), costPerHit, ev, profit, pProfit", () => {
+  const key = { ev: (r) => r.analysis.ev, profit: (r) => r.analysis.profit, pProfit: (r) => r.analysis.pProfit };
+  for (const sortBy of ["ev", "profit", "pProfit"]) {
+    const rs = hunt({ skin: "A-out1", sortBy });
+    assert.ok(rs.length > 1);
+    for (let i = 1; i < rs.length; i++) assert.ok(key[sortBy](rs[i - 1]) >= key[sortBy](rs[i]), `${sortBy} not descending`);
+  }
+  const cheap = hunt({ skin: "A-out1", sortBy: "costPerHit" });
+  for (let i = 1; i < cheap.length; i++) assert.ok(cheap[i - 1].costPerHit <= cheap[i].costPerHit);
+  const byChance = hunt({ skin: "A-out1" });
+  for (let i = 1; i < byChance.length; i++) assert.ok(byChance[i - 1].hitChance >= byChance[i].hitChance);
+});
