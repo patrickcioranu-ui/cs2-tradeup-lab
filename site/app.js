@@ -2,6 +2,7 @@ import { WEARS, analyze, marketName, wearForFloat } from "./engine.js";
 import { loadData, priceLookup, priceSource } from "./data.js";
 import { contractSize, hasOutputs, outputPool } from "./finder.js";
 import { floatScan } from "./floatscan.js";
+import { cheapestUnder, freshSample } from "./floatprices.js";
 import { knifeTypes } from "./hunter.js";
 import { huntableSkins } from "./skinhunter.js";
 import { atCheapestListings, buildDetails, detailsText } from "./details.js";
@@ -595,7 +596,13 @@ function renderFloatScan() {
     return;
   }
   $("#floatScanMessage").hidden = true;
-  const priceFor = (input, wear) => data.lookup(marketName(input.label, wear, calc.stattrak))?.price;
+  // Real listings below the range's float limit when we have a CSFloat sample; else the cheapest in the wear.
+  const priceFor = (input, wear, maxFloat, copy) => {
+    const name = marketName(input.label, wear, calc.stattrak);
+    const sample = freshSample(data.ladders, name);
+    if (sample) return cheapestUnder(sample, maxFloat, copy + 1, wear === "BS").costs[copy];
+    return data.lookup(name)?.price;
+  };
   const rows = floatScan({ inputs, outputsByCollection: outputsByCollection(), ...fees(), thinValuation: $("#thinValuation").value, priceFor });
   lastScanRows = rows;
   $("#floatScanTable").innerHTML = rows.map((r, index) => {
@@ -715,11 +722,11 @@ function priceUsedCell(s) {
     ? `${currency.format(s.minPrice)} → ${currency.format(s.maxPrice)}`
     : currency.format(s.price);
   if (!data?.ladders) return range;
-  const tag = s.priced === "ladder"
-    ? ' <span class="badge current-badge" title="Each copy priced at the next-cheapest real CSFloat listing">real listings</span>'
-    : s.priced === "ladder-short"
+  const tag = s.priced === "listings"
+    ? ' <span class="badge current-badge" title="Each copy priced at the next-cheapest real CSFloat listing below this float">real listings</span>'
+    : s.priced === "listings-short"
       ? ' <span class="badge" title="Fewer listings than copies needed: the rest are priced at the last listing">not enough listed</span>'
-      : ' <span class="badge" title="No recent price ladder for this skin: every copy priced at the cheapest listing">estimated</span>';
+      : ' <span class="badge" title="No recent CSFloat listing sample for this skin: every copy priced at the cheapest listing in its wear">estimated</span>';
   return `${range}${tag}`;
 }
 

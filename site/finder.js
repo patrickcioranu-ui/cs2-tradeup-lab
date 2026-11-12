@@ -1,5 +1,6 @@
 // Automatic trade-up search (spec §5). Pure functions: runs in a Web Worker or in Node tests.
 import { WEARS, analyze, marketName, normalizeFloat } from "./engine.js";
+import { cheapestUnder, floatLevels, freshSample } from "./floatprices.js";
 
 // Thin market: an output with no buy order near its listing, or any input/output with fewer than 5 listed.
 export const LOW_LIQUIDITY = 5;
@@ -50,28 +51,58 @@ function skinsAt(collection, tier, stattrak) {
   return (collection[String(tier)] || []).filter((s) => !stattrak || s.stattrak_available);
 }
 
-export function inputOptions(catalog, lookup, tier, stattrak, floatMode = "worst") {
+// Output float ranges an input of this collection/tier can turn into (used to pick float levels).
+function outputRanges(catalog, collectionName, tier, stattrak) {
+  return tier === KNIFE_TIER
+    ? specialPool(catalog, collectionName, stattrak)
+    : skinsAt(catalog.collections[collectionName], tier + 1, stattrak);
+}
+
+// Candidate inputs per collection. With a fresh CSFloat listing sample for a skin+wear, the skin is
+// offered at every float level where an output changes wear, each priced at the real cheapest
+// listing below that float ("listings"). Without one, the cheapest skin per wear is offered at the
+// float chosen by floatMode, priced at its cheapest listing ("estimated").
+export function inputOptions(catalog, lookup, tier, stattrak, floatMode = "worst", samples = null, now = Date.now()) {
   const result = new Map();
   for (const [name, collection] of Object.entries(catalog.collections)) {
     const inputs = skinsAt(collection, tier, stattrak);
     if (!inputs.length || !hasOutputs(catalog, name, tier, stattrak)) continue;
+    const outputs = outputRanges(catalog, name, tier, stattrak);
 
-    const cheapest = [];
+    const candidates = [];
     for (const wear of WEARS) {
-      let best = null;
+      let estimated = null;
       for (const skin of inputs) {
         if (!wearAvailable(skin, wear)) continue;
-        const quote = lookup(marketName(skin.market_base_name, wear.code, stattrak));
+        const itemName = marketName(skin.market_base_name, wear.code, stattrak);
+        const quote = lookup(itemName);
         if (!quote || !(quote.price > 0) || quote.listings === 0) continue;
-        if (!best || quote.price < best.price) {
+        const sample = freshSample(samples, itemName, now);
+        if (sample) {
+          const levels = floatLevels(skin, wear, outputs);
+          for (const level of levels) {
+            const inclusive = level === levels[levels.length - 1] && wear.code === "BS";
+            // Every listing below this level, cheapest first: copies are priced from it without re-sorting.
+            const ladder = cheapestUnder(sample, level, Infinity, inclusive).sorted;
+            if (!ladder.length) continue;
+            const float = inclusive ? skin.max_float : Math.max(skin.min_float, level - 0.0001);
+            candidates.push({
+              collection: name, name: itemName, skin, wear: wear.code, float, norm: normalizeFloat(float, skin.min_float, skin.max_float),
+              price: ladder[0], listings: quote.listings, maxFloat: level, inclusive, ladder, priced: "listings",
+            });
+          }
+        } else if (!estimated || quote.price < estimated.price) {
           const float = inputFloat(skin, wear, floatMode);
-          best = { collection: name, name: marketName(skin.market_base_name, wear.code, stattrak), skin, wear: wear.code, float, norm: normalizeFloat(float, skin.min_float, skin.max_float), price: quote.price, listings: quote.listings };
+          estimated = {
+            collection: name, name: itemName, skin, wear: wear.code, float, norm: normalizeFloat(float, skin.min_float, skin.max_float),
+            price: quote.price, listings: quote.listings, priced: "estimated",
+          };
         }
       }
-      if (best) cheapest.push(best);
+      if (estimated) candidates.push(estimated);
     }
 
-    const kept = cheapest.filter((x) => !cheapest.some((y) => y !== x && y.price <= x.price && y.norm <= x.norm && (y.price < x.price || y.norm < x.norm)));
+    const kept = candidates.filter((x) => !candidates.some((y) => y !== x && y.price <= x.price && y.norm <= x.norm && (y.price < x.price || y.norm < x.norm)));
     if (kept.length) result.set(name, kept);
   }
   return result;
@@ -140,22 +171,18 @@ function comparator(sortBy) {
   return (a, b) => (b.analysis[key] ?? -Infinity) - (a.analysis[key] ?? -Infinity) || a.analysis.cost - b.analysis.cost;
 }
 
-// Real price ladders (cheapest CSFloat listings per input skin) older than this are ignored.
-export const MAX_LADDER_AGE_MS = 24 * 3600 * 1000;
-
-// What each copy of a leg costs: the k-th copy is the k-th cheapest listing when a fresh ladder
-// exists ("ladder"; "ladder-short" when fewer listings than copies, the rest at the last price),
-// otherwise every copy at the cheapest listing ("estimated").
-export function legCosts(leg, ladders, now = Date.now()) {
-  const ladder = ladders?.[leg.option.name];
-  const fresh = ladder?.prices?.length && now - Date.parse(ladder.fetched_at) <= MAX_LADDER_AGE_MS;
-  if (!fresh) return { costs: Array(leg.count).fill(leg.option.price), priced: "estimated" };
-  const costs = Array.from({ length: leg.count }, (_, i) => ladder.prices[Math.min(i, ladder.prices.length - 1)]);
-  return { costs, priced: ladder.prices.length >= leg.count ? "ladder" : "ladder-short" };
+// What each copy of a leg costs. Options from a listing sample: the k-th copy is the k-th cheapest
+// real listing below the option's float level ("listings"; "listings-short" when fewer listings than
+// copies, the rest at the dearest one found). Otherwise every copy at the cheapest listing ("estimated").
+export function legCosts(leg) {
+  const ladder = leg.option.priced === "listings" ? leg.option.ladder : null;
+  if (!ladder?.length) return { costs: Array(leg.count).fill(leg.option.price), priced: "estimated" };
+  const costs = Array.from({ length: leg.count }, (_, i) => ladder[Math.min(i, ladder.length - 1)]);
+  return { costs, priced: ladder.length >= leg.count ? "listings" : "listings-short" };
 }
 
-export function priceLegs(legs, ladders, now = Date.now()) {
-  return legs.map((l) => ({ ...l, ...legCosts(l, ladders, now) }));
+export function priceLegs(legs) {
+  return legs.map((l) => ({ ...l, ...legCosts(l) }));
 }
 
 export function legsToInputs(legs) {
@@ -183,7 +210,7 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   let total = 0;
   for (const tier of tiers) {
     for (const st of modes) {
-      const options = inputOptions(catalog, lookup, tier, st, floatMode);
+      const options = inputOptions(catalog, lookup, tier, st, floatMode, ladders);
       const groups = [...options.entries()];
       const pools = Object.fromEntries(groups.map(([name]) => [name, outputPool(catalog, lookup, name, tier + 1, st)]));
       let work = 0;
@@ -199,10 +226,9 @@ export function findTradeUps(catalog, lookup, opts, onProgress = () => {}) {
   let kept = [];
   let done = 0;
   let lastReport = 0;
-  const now = Date.now();
   const consider = (tier, st, rawLegs, pools) => {
     done++;
-    const legs = priceLegs(rawLegs, ladders, now);
+    const legs = priceLegs(rawLegs);
     const cost = legs.reduce((s, l) => s + l.costs.reduce((a, c) => a + c, 0), 0);
     if (maxBudget !== null && cost > maxBudget + 1e-9) return;
     if (query && !legs.some((l) => l.option.collection.toLowerCase().includes(query))) return;

@@ -84,3 +84,13 @@ test("the 'your floats' row uses your actual inputs: their floats and cost-colum
   close(current.analysis.cost, 20);
   close(current.inputs[0].float, 0.2);
 });
+
+test("priceFor gets the float limit and which copy it is, so copies walk up real listings", () => {
+  const seen = [];
+  const rows = scanPriced((input, wear, maxFloat, copy) => {
+    seen.push([wear, +maxFloat.toFixed(4), copy]);
+    return 10 + copy; // each next copy one euro dearer
+  });
+  close(rows[0].analysis.cost, 10 * 10 + 45); // 10 FN copies: 10, 11, ..., 19
+  assert.deepEqual(seen.filter(([w]) => w === "FN").slice(0, 3), [["FN", 0.07, 0], ["FN", 0.07, 1], ["FN", 0.07, 2]]);
+});

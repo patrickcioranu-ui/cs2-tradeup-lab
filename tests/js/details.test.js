@@ -93,13 +93,13 @@ test("ladder-priced copies of one skin are one shopping line with the real subto
     ...inputs.slice(5),
   ];
   const a2 = analyze({ inputs: laddered, outputsByCollection, feeRate: 0.02 });
-  const d = buildDetails({ inputs: laddered, analysis: a2, priced: { "AUG | Syd Mead (Field-Tested)": "ladder" } });
+  const d = buildDetails({ inputs: laddered, analysis: a2, priced: { "AUG | Syd Mead (Field-Tested)": "listings" } });
   const aug = d.shopping.find((s) => s.label === "AUG | Syd Mead");
   assert.equal(aug.count, 9);
   close(aug.subtotal, 0.5 + 0.5 + 0.52 + 0.55 + 0.61 + 4 * 7);
   assert.equal(aug.minPrice, 0.5);
   assert.equal(aug.maxPrice, 7);
-  assert.equal(aug.priced, "ladder");
+  assert.equal(aug.priced, "listings");
   const real = atCheapestListings(d, () => 0.4);
   close(real.cost - a2.cost, (0.4 - 5) * 1); // only the non-ladder Zeus line is repriced (5 -> 0.4)
 });

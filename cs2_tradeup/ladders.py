@@ -1,10 +1,11 @@
-"""Real price ladders: the cheapest few CSFloat "buy now" listings per input skin.
+"""Float-aware listing samples: real CSFloat listings (price + float) per input skin.
 
-Buying 10 copies of a skin rarely costs 10x the single cheapest listing: each next
-copy is the next-cheapest listing. CSFloat's public price list only has the minimum,
-so with the user's API key (GitHub secret CSFLOAT_API_KEY) we read the cheapest
-listings per input skin. Requests are rate-limited, so each run refreshes a batch,
-oldest first, and keeps the rest from the previous deploy.
+The price of an input depends on its float, not just its wear (the cheapest Factory New
+may be 0.068 for EUR 1.11 while the cheapest under 0.03 costs EUR 2), and buying several
+copies walks up the listings. CSFloat's public price list has neither, so with the user's
+API key (GitHub secret CSFLOAT_API_KEY) we read, per input skin and wear, its 50 cheapest
+listings and its 50 lowest-float listings. Together they give a price-by-float curve.
+Requests are rate-limited, so each run refreshes a batch, oldest first, and keeps the rest.
 """
 
 from __future__ import annotations
@@ -19,60 +20,73 @@ from typing import Callable
 from cs2_tradeup.steam_prices import RateLimited, decode_body
 
 LISTINGS_URL = "https://csfloat.com/api/v1/listings"
-LADDER_DEPTH = 10
+SAMPLE_SIZE = 50
+SORTS = ("lowest_price", "lowest_float")
 ISO = "%Y-%m-%dT%H:%M:%SZ"
 
 
-def parse_listings(payload, fx: float) -> dict:
-    """Cheapest buy-now listings -> {"prices": [EUR, ascending], "floats": [...]} (prices are USD cents)."""
+def parse_listings(payload, fx: float) -> dict[str, list]:
+    """Buy-now listings -> {listing id: [price EUR, float]} (CSFloat prices are USD cents)."""
     rows = payload.get("data", []) if isinstance(payload, dict) else payload or []
-    pairs = sorted(
-        (row["price"], (row.get("item") or {}).get("float_value"))
-        for row in rows
-        if row.get("type", "buy_now") == "buy_now" and isinstance(row.get("price"), (int, float))
-    )
-    return {"prices": [round(cents / 100 * fx, 2) for cents, _ in pairs], "floats": [f for _, f in pairs]}
+    out = {}
+    for row in rows:
+        float_value = (row.get("item") or {}).get("float_value")
+        if row.get("type", "buy_now") != "buy_now" or not isinstance(row.get("price"), (int, float)) or float_value is None:
+            continue
+        out[str(row.get("id") or f"{row['price']}-{float_value}")] = [round(row["price"] / 100 * fx, 2), float_value]
+    return out
+
+
+def fetch_sample(get_listings: Callable[[str, str], object], name: str, fx: float) -> list[list]:
+    """Cheapest and lowest-float listings for one item, deduplicated, sorted by float."""
+    merged = {}
+    for sort_by in SORTS:
+        merged.update(parse_listings(get_listings(name, sort_by), fx))
+    return sorted(merged.values(), key=lambda pair: (pair[1], pair[0]))
 
 
 def refresh_ladders(
     names: list[str],
     previous: dict,
-    get_listings: Callable[[str], object],
+    get_listings: Callable[[str, str], object],
     now: datetime,
     budget: int,
     fx: float,
     sleep: Callable[[float], None],
     pause: float = 1.0,
 ) -> tuple[dict, dict]:
-    """Refresh up to ``budget`` ladders (never-fetched first, then oldest); keep the rest.
+    """Refresh up to ``budget`` items (never-fetched first, then oldest); keep the rest.
 
-    Ladders for names no longer in ``names`` are dropped. A 429 stops the run early.
+    Items no longer in ``names`` are dropped. A 429 stops the run early.
     """
     wanted = set(names)
-    ladders = {name: entry for name, entry in previous.items() if name in wanted}
-    order = sorted(names, key=lambda n: (n in ladders, ladders.get(n, {}).get("fetched_at", "")))
+    samples = {name: entry for name, entry in previous.items() if name in wanted and "listings" in entry}
+    order = sorted(names, key=lambda n: (n in samples, samples.get(n, {}).get("fetched_at", "")))
     fetched, rate_limited = 0, False
     stamp = now.strftime(ISO)
-    for i, name in enumerate(order[:budget]):
-        if i:
-            sleep(pause)
+
+    def paced(name, sort_by):
+        sleep(pause)
+        return get_listings(name, sort_by)
+
+    for name in order[:budget]:
         try:
-            ladder = parse_listings(get_listings(name), fx)
+            listings = fetch_sample(paced, name, fx)
         except RateLimited:
             rate_limited = True
             break
         except Exception:
             continue  # keep whatever we had for this item
-        ladders[name] = {**ladder, "fetched_at": stamp}
+        samples[name] = {"listings": listings, "fetched_at": stamp}
         fetched += 1
-    kept = sum(1 for name in ladders if ladders[name].get("fetched_at") != stamp)
-    return ladders, {"fetched": fetched, "kept": kept, "rate_limited": rate_limited}
+    kept = sum(1 for name in samples if samples[name].get("fetched_at") != stamp)
+    return samples, {"fetched": fetched, "kept": kept, "rate_limited": rate_limited}
 
 
-def csfloat_listings_getter(api_key: str) -> Callable[[str], object]:
-    """GET /listings for one item, cheapest buy-now first, authenticated with the user's key."""
-    def get(name: str):
-        query = urllib.parse.urlencode({"market_hash_name": name, "sort_by": "lowest_price", "type": "buy_now", "limit": LADDER_DEPTH})
+def csfloat_listings_getter(api_key: str) -> Callable[[str, str], object]:
+    """GET /listings for one item and sort order, authenticated with the user's key."""
+    def get(name: str, sort_by: str):
+        query = urllib.parse.urlencode({"market_hash_name": name, "sort_by": sort_by, "type": "buy_now", "limit": SAMPLE_SIZE})
         req = urllib.request.Request(f"{LISTINGS_URL}?{query}", headers={"Authorization": api_key, "User-Agent": "TradeUpLab-data-refresh/1.0"})
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:

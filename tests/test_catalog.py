@@ -73,6 +73,13 @@ SPECIAL_CRATES = [
 ]
 
 
+class LimitedEditionTests(unittest.TestCase):
+    def test_limited_edition_items_are_not_a_trade_up_collection(self):
+        raw = [{"id": "le", "name": "M4A1-S | Solitude", "category": {"name": "Rifles"}, "rarity": {"id": "rarity_legendary_weapon"},
+                "min_float": 0, "max_float": 1, "stattrak": False, "collections": [{"name": "Limited Edition Item"}]}]
+        self.assertEqual(build_catalog(raw, "t")["collections"], {})
+
+
 class SpecialPoolTests(unittest.TestCase):
     def setUp(self):
         from cs2_tradeup.catalog import build_special_pools

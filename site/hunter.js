@@ -66,15 +66,14 @@ export function findHunts(catalog, lookup, opts, onProgress = () => {}) {
     cases.set(name, { finishes, finishCount: finishes.size, candidates });
   }
 
-  const options = inputOptions(catalog, lookup, KNIFE_TIER, stattrak, floatMode);
+  const options = inputOptions(catalog, lookup, KNIFE_TIER, stattrak, floatMode, ladders);
   const groups = [...options.entries()];
   const hasTarget = (name) => (cases.get(name)?.candidates.length || 0) > 0;
   const pools = Object.fromEntries(groups.map(([name]) => [name, outputPool(catalog, lookup, name, KNIFE_TIER + 1, stattrak)]));
 
   const results = [];
-  const now = Date.now();
   const consider = (rawLegs) => {
-    const legs = priceLegs(rawLegs, ladders, now);
+    const legs = priceLegs(rawLegs);
     if (!legs.some((l) => hasTarget(l.option.collection))) return;
     const cost = legs.reduce((s, l) => s + l.costs.reduce((a, c) => a + c, 0), 0);
     if (maxBudget !== null && cost > maxBudget + 1e-9) return;

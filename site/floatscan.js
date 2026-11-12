@@ -22,7 +22,8 @@ function breakpoints(outputsByCollection) {
   return [...new Set(points.map((w) => Math.round(w * 1e9) / 1e9))].sort((a, b) => a - b);
 }
 
-// priceFor(input, wearCode) -> cheapest listing for that input skin in that wear (or undefined).
+// priceFor(input, wearCode, maxFloat, copyIndex) -> price of that copy of the input skin in that wear,
+// below the range's float limit (or undefined when nothing is listed).
 // When given, an input whose wear changes in a row is priced at that wear's cheapest listing;
 // inputs that stay in their current wear keep the cost-column price.
 export function floatScan({ inputs, outputsByCollection, feeRate = 0, fixedFee = 0, thinValuation = "buy_order", priceFor = null }) {
@@ -44,11 +45,14 @@ export function floatScan({ inputs, outputsByCollection, feeRate = 0, fixedFee =
     const current = currentW >= minW - 1e-12 && (last ? currentW <= maxW + 1e-12 : currentW < maxW - 1e-12);
     const fallbacks = new Set();
     // Your own range shows exactly what you entered; other ranges are re-bought just under their limit.
+    const copies = {};
     const scanned = current ? inputs.map((i) => ({ ...i })) : inputs.map((i) => {
       const float = i.minFloat + buyW * (i.maxFloat - i.minFloat);
       const wear = wearForFloat(float);
       if (!priceFor || wear === wearForFloat(i.float)) return { ...i, float };
-      const listing = priceFor(i, wear);
+      // Real price for this copy: the n-th cheapest listing of this skin below the range's float limit.
+      const copy = (copies[i.label] = (copies[i.label] ?? -1) + 1);
+      const listing = priceFor(i, wear, i.minFloat + maxW * (i.maxFloat - i.minFloat), copy);
       if (!Number.isFinite(listing)) {
         fallbacks.add(i.label);
         return { ...i, float };

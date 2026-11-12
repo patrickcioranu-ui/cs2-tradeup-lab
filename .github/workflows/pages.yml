@@ -44,7 +44,7 @@ jobs:
         continue-on-error: true
         env:
           CSFLOAT_API_KEY: ${{ secrets.CSFLOAT_API_KEY }}
-          LADDER_BUDGET: "300"
+          LADDER_BUDGET: "150"
         run: |
           node scripts/ladder_targets.mjs > "$RUNNER_TEMP/ladder_targets.json"
           python scripts/update_ladders.py "$RUNNER_TEMP/ladder_targets.json"

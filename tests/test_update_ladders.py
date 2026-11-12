@@ -23,14 +23,14 @@ class UpdateLaddersTests(unittest.TestCase):
     def test_writes_ladders_with_metadata(self):
         def factory(key):
             self.assertEqual(key, "secret")
-            return lambda name: {"data": [{"type": "buy_now", "price": 100, "item": {"float_value": 0.2}}]}
+            return lambda name, sort_by: {"data": [{"id": "x", "type": "buy_now", "price": 100, "item": {"float_value": 0.2}}]}
 
         with tempfile.TemporaryDirectory() as tmp:
             code = run(Path(tmp), api_key="secret", targets=["A", "B"], previous={}, getter_factory=factory, now=NOW, budget=5, fx=0.9, sleep=lambda s: None)
             self.assertEqual(code, 0)
             out = json.loads((Path(tmp) / "ladders.json").read_text(encoding="utf-8"))
             self.assertEqual(out["updated_at"], "2026-11-12T12:00:00Z")
-            self.assertEqual(out["ladders"]["A"]["prices"], [0.9])
+            self.assertEqual(out["ladders"]["A"]["listings"], [[0.9, 0.2]])
             self.assertEqual(out["stats"], {"fetched": 2, "kept": 0, "rate_limited": False, "targets": 2})
 
 

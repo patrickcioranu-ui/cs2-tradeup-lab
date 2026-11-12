@@ -18,7 +18,7 @@ function outcomeMarketName(name, wear) {
   return name.startsWith("★") && !name.includes(" | ") ? name : `${name} (${WEAR_NAME[wear]})`;
 }
 
-// `priced` maps an input's market name to how its copies were priced: "ladder" / "ladder-short"
+// `priced` maps an input's market name to how its copies were priced: "listings" / "listings-short"
 // (each copy at the next-cheapest real listing) or "estimated" (every copy at the cheapest listing).
 export function buildDetails({ inputs, analysis, stattrak = false, priced = {} }) {
   const groups = new Map();
@@ -79,7 +79,7 @@ export function atCheapestListings(details, cheapest) {
   const a = details.analysis;
   const missing = [];
   const unitPrices = details.shopping.map((s) => {
-    if (s.priced?.startsWith("ladder")) return s.price; // already priced at the real listings, copy by copy
+    if (s.priced?.startsWith("listings")) return s.price; // already priced at the real listings, copy by copy
     const price = cheapest(s.marketName);
     if (!Number.isFinite(price)) {
       missing.push(s.marketName);

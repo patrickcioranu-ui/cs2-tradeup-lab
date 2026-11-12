@@ -41,16 +41,15 @@ export function findSkinHunts(catalog, lookup, opts, onProgress = () => {}) {
   const pool = skinsAt(catalog.collections[target.collectionName], target.tier, stattrak);
   if (!pool.length) return [];
 
-  const options = inputOptions(catalog, lookup, inputTier, stattrak, floatMode);
+  const options = inputOptions(catalog, lookup, inputTier, stattrak, floatMode, ladders);
   const own = options.get(target.collectionName) || [];
   const fillers = [...options.entries()].filter(([name]) => name !== target.collectionName);
   const pools = Object.fromEntries([...options.keys()].map((name) => [name, outputPool(catalog, lookup, name, target.tier, stattrak)]));
   const displayName = `${stattrak ? "StatTrak™ " : ""}${target.skin.market_base_name}`;
 
   const results = [];
-  const now = Date.now();
   const consider = (rawLegs) => {
-    const legs = priceLegs(rawLegs, ladders, now);
+    const legs = priceLegs(rawLegs);
     const cost = legs.reduce((s, l) => s + l.costs.reduce((a, c) => a + c, 0), 0);
     if (maxBudget !== null && cost > maxBudget + 1e-9) return;
     const w = legs.reduce((s, l) => s + l.count * normalizeFloat(l.option.float, l.option.skin.min_float, l.option.skin.max_float), 0) / SIZE;

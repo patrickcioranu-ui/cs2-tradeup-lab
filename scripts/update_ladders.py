@@ -1,11 +1,11 @@
-"""Refresh site/data/ladders.json: the cheapest CSFloat listings per input skin.
+"""Refresh site/data/ladders.json: CSFloat listings (price + float) per input skin.
 
 Needs the CSFLOAT_API_KEY environment variable (a GitHub Actions secret). Without it,
 nothing is written and the site prices every copy at the cheapest listing as before.
 
 Usage: node scripts/ladder_targets.mjs > targets.json
        python scripts/update_ladders.py targets.json
-Env:   CSFLOAT_API_KEY, LADDER_BUDGET (items per run, default 300),
+Env:   CSFLOAT_API_KEY, LADDER_BUDGET (items per run, 2 requests each, default 150),
        LADDERS_PREVIOUS_URL (last deployed ladders.json, to carry unrefreshed items)
 """
 
@@ -47,7 +47,7 @@ def run(
         return 0
     ladders, stats = refresh_ladders(targets, previous, getter_factory(api_key), now, budget, fx, sleep)
     stats = {**stats, "targets": len(targets)}
-    out = {"updated_at": now.strftime(ISO), "currency": "EUR", "depth": 10, "stats": stats, "ladders": ladders}
+    out = {"updated_at": now.strftime(ISO), "currency": "EUR", "format": "listings", "stats": stats, "ladders": ladders}
     (data_dir / "ladders.json").write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print(f"ladders: fetched {stats['fetched']}, kept {stats['kept']}, targets {stats['targets']}, rate limited: {stats['rate_limited']}")
     return 0
@@ -70,7 +70,7 @@ def main() -> int:
     fx = 1 / prices["fx_rate"]  # fx_rate is USD per EUR
     api_key = os.environ.get("CSFLOAT_API_KEY", "").strip()
     previous = _previous_ladders(os.environ.get("LADDERS_PREVIOUS_URL", DEFAULT_PREVIOUS)) if api_key else {}
-    budget = int(os.environ.get("LADDER_BUDGET", "300"))
+    budget = int(os.environ.get("LADDER_BUDGET", "150"))
     now = datetime.now(timezone.utc).replace(microsecond=0)
     return run(data_dir, api_key, targets, previous, csfloat_listings_getter, now, budget, fx)
 

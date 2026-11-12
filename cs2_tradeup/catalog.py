@@ -15,6 +15,8 @@ RARITY_TIERS = {
 }
 
 EXCLUDED_CATEGORIES = {"Knives", "Gloves"}
+# Armory "Limited Edition Item" skins are not part of a real collection, so they cannot be traded up.
+EXCLUDED_COLLECTIONS = {"Limited Edition Item"}
 
 
 def build_catalog(raw_skins: list[dict], generated_at: str, raw_crates: list[dict] | None = None) -> dict:
@@ -28,6 +30,8 @@ def build_catalog(raw_skins: list[dict], generated_at: str, raw_crates: list[dic
         if tier is None or not skin_collections:
             continue
         collection = skin_collections[0]["name"]
+        if collection in EXCLUDED_COLLECTIONS:
+            continue
         collections.setdefault(collection, {}).setdefault(str(tier), []).append({
             "id": raw["id"],
             "market_base_name": raw["name"],

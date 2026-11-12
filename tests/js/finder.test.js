@@ -192,23 +192,25 @@ test("low liquidity uses real listing counts: any input or output with fewer tha
 const fresh = () => new Date().toISOString();
 const singleA = (ladders) => findTradeUps(catalog, lookup, { ...base, ladders }).find((r) => legKey(r) === "10xA-cheap:MW");
 
-test("price ladders: 10 copies cost the sum of the 10 cheapest real listings", () => {
+const sampleOf = (prices) => prices.map((p, i) => [p, 0.08 + i * 0.006]); // all Minimal Wear floats
+
+test("listing samples: 10 copies cost the sum of the 10 cheapest real listings", () => {
   const prices = [1, 1, 1.1, 1.1, 1.2, 1.2, 1.3, 1.3, 1.4, 1.5];
-  const r = singleA({ "A-cheap (Minimal Wear)": { prices, fetched_at: fresh() } });
+  const r = singleA({ "A-cheap (Minimal Wear)": { listings: sampleOf(prices), fetched_at: fresh() } });
   close(r.analysis.cost, 12.1);
   assert.deepEqual(r.legs[0].costs, prices);
-  assert.equal(r.legs[0].priced, "ladder");
+  assert.equal(r.legs[0].priced, "listings");
 });
 
-test("price ladders: too few listings fills the rest at the last price and says so", () => {
-  const r = singleA({ "A-cheap (Minimal Wear)": { prices: [1, 1.2], fetched_at: fresh() } });
+test("listing samples: too few listings fills the rest at the last price and says so", () => {
+  const r = singleA({ "A-cheap (Minimal Wear)": { listings: sampleOf([1, 1.2]), fetched_at: fresh() } });
   close(r.analysis.cost, 1 + 1.2 * 9);
-  assert.equal(r.legs[0].priced, "ladder-short");
+  assert.equal(r.legs[0].priced, "listings-short");
 });
 
-test("price ladders: stale or missing ladders fall back to the cheapest listing", () => {
+test("listing samples: stale or missing samples fall back to the cheapest listing", () => {
   const old = new Date(Date.now() - 30 * 3600_000).toISOString();
-  const stale = singleA({ "A-cheap (Minimal Wear)": { prices: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5], fetched_at: old } });
+  const stale = singleA({ "A-cheap (Minimal Wear)": { listings: sampleOf([5, 5, 5, 5, 5, 5, 5, 5, 5, 5]), fetched_at: old } });
   close(stale.analysis.cost, 10);
   assert.equal(stale.legs[0].priced, "estimated");
   close(singleA(undefined).analysis.cost, 10);

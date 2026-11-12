@@ -33,10 +33,13 @@ ROI or chance of profit.
   range uses exactly what you entered.
 - **Jackpot search:** a *Best case* column (profit if you hit the most valuable outcome, with its chance) and a
   *Biggest best case* sort, for long shots with big payouts; pair it with *Max profit chance*.
-- **Real price ladders (optional):** with a CSFloat API key stored as the `CSFLOAT_API_KEY` repository secret, each
-  hourly deploy reads the cheapest 10 buy-now listings for a batch of input skins (oldest first, the rest carried
-  over), so buying several copies costs the real sum of the cheapest listings instead of N x the cheapest. Ladders
-  older than 24 h are ignored. Without the key everything works as before.
+- **Float-aware prices (optional):** with a CSFloat API key stored as the `CSFLOAT_API_KEY` repository secret, each
+  hourly deploy reads, for a batch of input skins (oldest first, the rest carried over), the 50 cheapest and 50
+  lowest-float listings with their floats. The search then tries every input float level where an output would change
+  wear, priced at the real cheapest listings below that float, and prices each extra copy at the next listing up
+  (shown as "real listings" in the details popup). Samples older than 24 h are ignored; without the key every input is
+  priced at its cheapest listing in its wear ("estimated") and the Input float setting picks the float.
+- **Limited Edition Items** (Armory exclusives) are excluded: they aren't part of a trade-up collection.
 - **Low-liquidity warning:** shown when any input or output has fewer than 5 CSFloat listings (a thin market:
   selling near the listed price is unlikely). Buy orders under 5% of the listing are ignored as lowballs.
 
